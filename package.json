@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "main": "main.js",
+  "main": "main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -42,7 +42,7 @@
   },
   "build": {
     "appId": "com.rasedsuper.app",
-    "files": ["dist/**/*", "main.js"],
+    "files": ["dist/**/*", "main.cjs"],
     "directories": { "output": "release" },
     "win": { "target": "portable" }
   }
