@@ -32,6 +32,12 @@ jobs:
         with:
           name: Rased-Android-Bundle-AAB
           path: android/app/build/outputs/bundle/release/*.aab
+          # 💉 الحقنة الجديدة: إضافة قسم شحن الـ APK للتحميل المباشر
+      - name: 📲 Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rased-Production-APK
+          path: android/app/build/outputs/apk/release/*.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -54,28 +60,41 @@ jobs:
           name: Rased-Windows-EXE
           path: release/*.exe
 
-  # 🍎 مهمة بناء نسخة الآيفون (IPA)
+# 🍎 مهمة بناء نسخة الآيفون (IPA)
   build-ios:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      
       - uses: actions/setup-node@v4
-        with: { node-version: '22' } # 💉 تمت الترقية هنا
+        with: { node-version: '22' }
+        
       - name: 📦 Install Dependencies
         run: npm install
+        
       - name: 🌐 Build Web
         run: npm run build
+        
       - name: 🔄 Sync iOS
         run: npx cap sync ios
+        
+      # 💉 الحقنة الجديدة: توليد ملف مساحة العمل الخاص بآبل
+      - name: 🍏 Install CocoaPods (Generate Workspace)
+        run: |
+          cd ios/App
+          pod install
+          
       - name: 🔨 Build Xcode Project
         run: |
           cd ios/App
           xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -sdk iphoneos CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+          
       - name: 📦 Package into IPA
         run: |
           mkdir -p Payload
           mv ios/App/build/Release-iphoneos/App.app Payload/
           zip -r Rased-iOS.ipa Payload
+          
       - name: 📲 Upload iOS IPA
         uses: actions/upload-artifact@v4
         with:
