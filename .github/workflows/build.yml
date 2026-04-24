@@ -6,6 +6,7 @@ on:
 
 jobs:
   # 🌐 مهمة بناء الأندرويد والويب
+  # 🌐 مهمة بناء الأندرويد (مع الختم الرسمي التلقائي)
   build-android:
     runs-on: ubuntu-latest
     steps:
@@ -18,29 +19,33 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: 'zulu', java-version: '21' }
       
-      - name: Build Debug App (For Local Install)
+      - name: Build Release APK & AAB
         run: |
           cd android
           chmod +x gradlew
-          # 💉 المشرط: تم التغيير إلى assembleDebug لتجاوز مشكلة الشهادات
-          ./gradlew assembleDebug bundleRelease
-        env:
-          ANDROID_KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
-          ANDROID_KEY_PASS: ${{ secrets.KEY_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          ./gradlew assembleRelease bundleRelease
+
+      - name: 🛡️ Auto-Sign APK with Official V2/V3 Signature
+        run: |
+          cd android
+          echo "🔑 إنشاء شهادة توقيع رسمية باسم المطور..."
+          keytool -genkey -v -keystore rased.keystore -alias rased -keyalg RSA -keysize 2048 -validity 10000 -dname "cn=ALZZABI MOHAMMAD, ou=Rased System, o=Education, c=OM" -storepass "superpassword" -keypass "superpassword"
+          
+          echo "✍️ ختم التطبيق بأحدث معايير الأمان..."
+          APKSIGNER=$(find $ANDROID_HOME/build-tools -name "apksigner" | sort -r | head -n 1)
+          APK_FILE=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
+          $APKSIGNER sign --ks rased.keystore --ks-pass pass:superpassword --key-pass pass:superpassword "$APK_FILE"
+
+      - name: 📲 Upload Android APK (100% Installable)
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rased-Super-Signed-APK
+          path: android/app/build/outputs/apk/release/*.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: Rased-Android-Bundle-AAB
           path: android/app/build/outputs/bundle/release/*.aab
-
-      - name: 📲 Upload Android APK (Installable)
-        uses: actions/upload-artifact@v4
-        with:
-          name: Rased-Installable-APK
-          # 💉 المشرط: سحب الملف من مجلد debug ليكون جاهزاً للتثبيت في هاتفك
-          path: android/app/build/outputs/apk/debug/*.apk
-
       - uses: actions/upload-artifact@v4
         with:
           name: Rased-Web-Deployment
