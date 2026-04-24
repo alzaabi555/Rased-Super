@@ -5,26 +5,24 @@ on:
     branches: [ "main", "master" ]
 
 jobs:
-  # 🌐 مهمة بناء الأندرويد والويب (نظام Ubuntu)
+  # 🌐 مهمة بناء الأندرويد والويب
   build-android:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+        with: { node-version: '22' } # 💉 تمت الترقية هنا
       - run: npm install
       - run: npm run build
       - run: npx cap sync
       - uses: actions/setup-java@v4
         with: { distribution: 'zulu', java-version: '17' }
       
-      # بناء نسخة الـ APK والـ AAB الرسمية
       - name: Build Release App
         run: |
           cd android
           ./gradlew assembleRelease bundleRelease
         env:
-          # ربط المصنع بالخزنة السرية التي أعددناها
           ANDROID_KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASS: ${{ secrets.KEY_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -39,13 +37,13 @@ jobs:
           name: Rased-Web-Deployment
           path: dist/
 
-  # 🪟 مهمة بناء نسخة الويندوز (نظام Windows)
+  # 🪟 مهمة بناء نسخة الويندوز
   build-windows:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
+        with: { node-version: '22' } # 💉 تمت الترقية هنا
       - run: npm install
       - run: npm run build
       - name: Build EXE
@@ -54,36 +52,29 @@ jobs:
         with:
           name: Rased-Windows-EXE
           path: release/*.exe
-          
-          # 🍎 مهمة بناء نسخة الآيفون (نظام macOS) - مخصصة لسايستور
+
+  # 🍎 مهمة بناء نسخة الآيفون (IPA)
   build-ios:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      
       - uses: actions/setup-node@v4
-        with: { node-version: '20' }
-        
+        with: { node-version: '22' } # 💉 تمت الترقية هنا
       - name: 📦 Install Dependencies
         run: npm install
-        
       - name: 🌐 Build Web
         run: npm run build
-        
       - name: 🔄 Sync iOS
         run: npx cap sync ios
-        
-      - name: 🔨 Build Xcode Project (No Code Sign)
+      - name: 🔨 Build Xcode Project
         run: |
           cd ios/App
           xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -sdk iphoneos CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
-          
       - name: 📦 Package into IPA
         run: |
           mkdir -p Payload
           mv ios/App/build/Release-iphoneos/App.app Payload/
           zip -r Rased-iOS.ipa Payload
-          
       - name: 📲 Upload iOS IPA
         uses: actions/upload-artifact@v4
         with:
