@@ -18,12 +18,12 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: 'zulu', java-version: '21' }
       
-      # 🎨 الحقنة الجمالية: حقن الأيقونة الجديدة الماسية (image_7.png) في مشروع الأندرويد
+      # 🎨 الحقنة الجمالية: حقن الأيقونة الجديدة الماسية (icon.png) في مشروع الأندرويد
       - name: 🎨 Inject Official App Icon (Rased Super)
         run: |
           # 💉 المشرط: نسخ ملف الأيقونة الجديدة إلى مسار mipmap-xxxhdpi لضمان الجودة العالية
-          cp image_7.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cp image_7.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          cp icon.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cpicon.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
 
       - name: Build Release APK & AAB
         run: |
