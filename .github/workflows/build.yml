@@ -1,12 +1,11 @@
-name: Rased Super Production Build 🚀
+name: Rased Super Production Build 🚀 (Diamond Edition)
 
 on:
   push:
     branches: [ "main", "master" ]
 
 jobs:
-  # 🌐 مهمة بناء الأندرويد والويب
-  # 🌐 مهمة بناء الأندرويد (مع الختم الرسمي التلقائي)
+  # 🌐 مهمة بناء الأندرويد (مع الختم الماسي والأيقونة الجديدة)
   build-android:
     runs-on: ubuntu-latest
     steps:
@@ -19,33 +18,48 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: 'zulu', java-version: '21' }
       
+      # 🎨 الحقنة الجمالية: حقن الأيقونة الجديدة الماسية (image_7.png) في مشروع الأندرويد
+      - name: 🎨 Inject Official App Icon (Rased Super)
+        run: |
+          # 💉 المشرط: نسخ ملف الأيقونة الجديدة إلى مسار mipmap-xxxhdpi لضمان الجودة العالية
+          cp image_7.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
+          cp image_7.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+
       - name: Build Release APK & AAB
         run: |
           cd android
           chmod +x gradlew
+          # 💉 المشرط: بناء نسخة الـ Release (الAPK والAAB)
           ./gradlew assembleRelease bundleRelease
 
-      - name: 🛡️ Auto-Sign APK with Official V2/V3 Signature
+      # 🛡️ الحقنة الأمنية: إنشاء ختم توقيع رسمي مشفر باسمك واستخدامه لختم التطبيق
+      - name: 🛡️ Auto-Sign APK with Official V2/V3 Signature (ALZZABI MOHAMMAD)
         run: |
           cd android
-          echo "🔑 إنشاء شهادة توقيع رسمية باسم المطور..."
+          echo "🔑 إنشاء شهادة توقيع رسمية باسم المطور ALZZABI MOHAMMAD مدتها 30 عاماً..."
           keytool -genkey -v -keystore rased.keystore -alias rased -keyalg RSA -keysize 2048 -validity 10000 -dname "cn=ALZZABI MOHAMMAD, ou=Rased System, o=Education, c=OM" -storepass "superpassword" -keypass "superpassword"
           
-          echo "✍️ ختم التطبيق بأحدث معايير الأمان..."
+          echo "✍️ ختم التطبيق بأحدث معايير الأمان (V2/V3)..."
+          # إيجاد أداة الapksigner الرسمية واستخدامها لختم ملف الAPK الخام
           APKSIGNER=$(find $ANDROID_HOME/build-tools -name "apksigner" | sort -r | head -n 1)
           APK_FILE=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
           $APKSIGNER sign --ks rased.keystore --ks-pass pass:superpassword --key-pass pass:superpassword "$APK_FILE"
 
-      - name: 📲 Upload Android APK (100% Installable)
+      # شحن الAPK الموقعة والماسية للتحميل الفوري
+      - name: 📲 Upload Android APK (Signed & Installable)
         uses: actions/upload-artifact@v4
         with:
           name: Rased-Super-Signed-APK
           path: android/app/build/outputs/apk/release/*.apk
 
-      - uses: actions/upload-artifact@v4
+      # شحن الAAB (حزمة المتجر)
+      - name: 📦 Upload Android Bundle (AAB)
+        uses: actions/upload-artifact@v4
         with:
           name: Rased-Android-Bundle-AAB
           path: android/app/build/outputs/bundle/release/*.aab
+
+      # شحن نسخة الموقع
       - uses: actions/upload-artifact@v4
         with:
           name: Rased-Web-Deployment
@@ -72,37 +86,29 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
-      
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
-
       - name: 📦 Install Dependencies & Build Web Project
         run: |
           npm install
           npm run build
-
       - name: 🍏 Create Fresh iOS Project
         run: |
           rm -rf ios
           npx cap add ios
-
       - name: 🎨 Generate App Icons Automatically
         run: npx @capacitor/assets generate --ios || true
-
       - name: ✍️ Set Arabic App Name (Smart Injection)
         run: |
           /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName منظومة راصد" ios/App/App/Info.plist || true
           /usr/libexec/PlistBuddy -c "Set :CFBundleName منظومة راصد" ios/App/App/Info.plist || true
-
       - name: 🚀 Build IPA
         run: |
           cd ios/App
           xcodebuild -project App.xcodeproj -scheme App -configuration Debug -sdk iphoneos CODE_SIGNING_ALLOWED=NO SYMROOT=$PWD/build build
-          
           mkdir -p Payload
           cp -r build/Debug-iphoneos/App.app Payload/
           zip -r ../../Rased-Super.ipa Payload
-
       - name: 📲 Upload iOS IPA
         uses: actions/upload-artifact@v4
         with:
