@@ -1,6 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
-import { School, Users, UserCircle2, GraduationCap, Home } from 'lucide-react';
+import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 
 // 💉 استيراد كافة أفراد العائلة
@@ -20,7 +19,7 @@ function GlobalHomeButton() {
 
   return (
     <button
-      onClick={() => window.location.href = '/'}
+    onClick={() => window.location.hash = '#/'}
       className="fixed top-6 left-6 z-[99999] flex items-center justify-center w-12 h-12 bg-white/20 dark:bg-black/40 backdrop-blur-xl border border-white/30 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all duration-300"
       title="العودة للرئيسية"
     >
