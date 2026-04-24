@@ -16,7 +16,7 @@ jobs:
       - run: npm run build
       - run: npx cap sync
       - uses: actions/setup-java@v4
-        with: { distribution: 'zulu', java-version: '17' }
+        with: { distribution: 'zulu', java-version: '21' }
       
       - name: Build Release App
         run: |
