@@ -21,6 +21,7 @@ jobs:
       - name: Build Release App
         run: |
           cd android
+          chmod +x gradlew # 💉 الحقنة الأمنية: إعطاء تصريح التشغيل للملف
           ./gradlew assembleRelease bundleRelease
         env:
           ANDROID_KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
