@@ -18,16 +18,17 @@ function GlobalHomeButton() {
   // إخفاء الزر إذا كنا في البوابة الرئيسية
   if (location.pathname === '/') return null;
 
-  return (
+ return (
     <button
-    onClick={() => window.location.hash = '#/'}
-      className="fixed top-6 left-6 z-[99999] flex items-center justify-center w-12 h-12 bg-white/20 dark:bg-black/40 backdrop-blur-xl border border-white/30 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all duration-300"
+      onClick={() => window.location.hash = '#/'}
+      /* 💉 الحقنة هنا: مسافة 1.5rem (تعادل top-6) مضافاً إليها مساحة الكاميرا */
+      style={{ top: 'calc(1.5rem + env(safe-area-inset-top))' }}
+      className="fixed left-6 z-[99999] flex items-center justify-center w-12 h-12 bg-white/20 dark:bg-black/40 backdrop-blur-xl border border-white/30 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all duration-300"
       title="العودة للرئيسية"
     >
       <Home className="text-gray-800 dark:text-white" size={24} />
     </button>
   );
-}
 
 // =========================================================
 // 1️⃣ الشاشة الرئيسية (تمت مطابقتها بالصورة المرفقة 100%)
