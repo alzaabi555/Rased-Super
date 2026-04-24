@@ -98,22 +98,16 @@ function SuperAppLanding() {
 // =========================================================
 export default function App() {
   return (
-    <BrowserRouter>
-      {/* 💉 حقن زر العودة هنا ليعمل فوق كل التطبيقات */}
+    <HashRouter>
       <GlobalHomeButton /> 
-      
       <Routes>
         <Route path="/" element={<SuperAppLanding />} />
-        
-        {/* ربط المسارات بالتطبيقات المعزولة */}
         <Route path="/admin/*" element={<AdminApp />} />
         <Route path="/teacher/*" element={<TeacherApp />} />
         <Route path="/parent/*" element={<ParentApp />} />
         <Route path="/student/*" element={<StudentApp />} />
-        
-        {/* العودة للرئيسية في حال فقدان المسار */}
         <Route path="*" element={<SuperAppLanding />} />
       </Routes>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
