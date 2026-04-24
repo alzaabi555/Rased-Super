@@ -11,18 +11,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '22' } # 💉 تمت الترقية هنا
+        with: { node-version: '22' }
       - run: npm install
       - run: npm run build
       - run: npx cap sync
       - uses: actions/setup-java@v4
         with: { distribution: 'zulu', java-version: '21' }
       
-      - name: Build Release App
+      - name: Build Debug App (For Local Install)
         run: |
           cd android
-          chmod +x gradlew # 💉 الحقنة الأمنية: إعطاء تصريح التشغيل للملف
-          ./gradlew assembleRelease bundleRelease
+          chmod +x gradlew
+          # 💉 المشرط: تم التغيير إلى assembleDebug لتجاوز مشكلة الشهادات
+          ./gradlew assembleDebug bundleRelease
         env:
           ANDROID_KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
           ANDROID_KEY_PASS: ${{ secrets.KEY_PASSWORD }}
@@ -32,12 +33,13 @@ jobs:
         with:
           name: Rased-Android-Bundle-AAB
           path: android/app/build/outputs/bundle/release/*.aab
-          # 💉 الحقنة الجديدة: إضافة قسم شحن الـ APK للتحميل المباشر
-      - name: 📲 Upload Android APK
+
+      - name: 📲 Upload Android APK (Installable)
         uses: actions/upload-artifact@v4
         with:
-          name: Rased-Production-APK
-          path: android/app/build/outputs/apk/release/*.apk
+          name: Rased-Installable-APK
+          # 💉 المشرط: سحب الملف من مجلد debug ليكون جاهزاً للتثبيت في هاتفك
+          path: android/app/build/outputs/apk/debug/*.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -50,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: '22' } # 💉 تمت الترقية هنا
+        with: { node-version: '22' }
       - run: npm install
       - run: npm run build
       - name: Build EXE
@@ -60,7 +62,7 @@ jobs:
           name: Rased-Windows-EXE
           path: release/*.exe
 
-# 🍎 مهمة بناء نسخة الآيفون (الكود الذهبي)
+  # 🍎 مهمة بناء نسخة الآيفون (الكود الذهبي)
   build-ios:
     runs-on: macos-latest
     steps:
