@@ -60,7 +60,7 @@ jobs:
           name: Rased-Windows-EXE
           path: release/*.exe
 
-# 🍎 مهمة بناء نسخة الآيفون (IPA)
+# 🍎 مهمة بناء نسخة الآيفون (الكود الذهبي)
   build-ios:
     runs-on: macos-latest
     steps:
@@ -68,35 +68,36 @@ jobs:
       
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
-        
-      - name: 📦 Install Dependencies
-        run: npm install
-        
-      - name: 🌐 Build Web
-        run: npm run build
-        
-      - name: 🔄 Sync iOS
-        run: npx cap sync ios
-        
-      # 💉 الحقنة الجديدة: توليد ملف مساحة العمل الخاص بآبل
-      - name: 🍏 Install CocoaPods (Generate Workspace)
+
+      - name: 📦 Install Dependencies & Build Web Project
+        run: |
+          npm install
+          npm run build
+
+      - name: 🍏 Create Fresh iOS Project
+        run: |
+          rm -rf ios
+          npx cap add ios
+
+      - name: 🎨 Generate App Icons Automatically
+        run: npx @capacitor/assets generate --ios || true
+
+      - name: ✍️ Set Arabic App Name (Smart Injection)
+        run: |
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName منظومة راصد" ios/App/App/Info.plist || true
+          /usr/libexec/PlistBuddy -c "Set :CFBundleName منظومة راصد" ios/App/App/Info.plist || true
+
+      - name: 🚀 Build IPA
         run: |
           cd ios/App
-          pod install
+          xcodebuild -project App.xcodeproj -scheme App -configuration Debug -sdk iphoneos CODE_SIGNING_ALLOWED=NO SYMROOT=$PWD/build build
           
-      - name: 🔨 Build Xcode Project
-        run: |
-          cd ios/App
-          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -sdk iphoneos CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
-          
-      - name: 📦 Package into IPA
-        run: |
           mkdir -p Payload
-          mv ios/App/build/Release-iphoneos/App.app Payload/
-          zip -r Rased-iOS.ipa Payload
-          
+          cp -r build/Debug-iphoneos/App.app Payload/
+          zip -r ../../Rased-Super.ipa Payload
+
       - name: 📲 Upload iOS IPA
         uses: actions/upload-artifact@v4
         with:
-          name: Rased-iOS-IPA
-          path: Rased-iOS.ipa
+          name: Rased-Super-iOS-IPA
+          path: Rased-Super.ipa
