@@ -23,7 +23,7 @@ jobs:
         run: |
           # 💉 المشرط: نسخ ملف الأيقونة الجديدة إلى مسار mipmap-xxxhdpi لضمان الجودة العالية
           cp icon.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png
-          cpicon.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
+          cp icon.png android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png
 
       - name: Build Release APK & AAB
         run: |
