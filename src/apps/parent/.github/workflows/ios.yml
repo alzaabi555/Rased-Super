@@ -1,0 +1,58 @@
+name: Build iOS App (Unsigned IPA for SideStore)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Dependencies & Build Web
+        run: |
+          echo "📦 Installing packages..."
+          npm install
+          echo "🏗️ Building web assets..."
+          npm run build
+
+      - name: Setup iOS Platform (Modern SPM)
+        run: |
+          echo "🧹 Cleaning up..."
+          rm -rf ios
+          echo "📥 Installing iOS Capacitor package..."
+          npm install @capacitor/ios
+          echo "🍏 Adding iOS platform..."
+          npx cap add ios
+          echo "🔄 Syncing plugins..."
+          npx cap sync ios
+
+      - name: Build iOS App via Xcode (SPM Auto-Detect)
+        run: |
+          echo "🔨 Compiling App..."
+          cd ios/App
+          
+          # تحميل حزم SPM قبل البناء
+          xcodebuild -resolvePackageDependencies -project App.xcodeproj || true
+          
+          # إجبار أبل على وضع التطبيق في المجلد الذي نريده بالضبط 👈
+          xcodebuild -project App.xcodeproj -scheme App -configuration Release -sdk iphoneos CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO CONFIGURATION_BUILD_DIR=build/Release-iphoneos build
+
+      - name: Package into IPA
+        run: |
+          echo "🎁 Zipping into IPA format..."
+          mkdir -p Payload
+          mv ios/App/build/Release-iphoneos/App.app Payload/
+          zip -r rased-parent.ipa Payload
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rased-Parent-IPA
+          path: rased-parent.ipa

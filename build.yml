@@ -1,0 +1,56 @@
+name: Rased Super Production Build 🚀
+
+on:
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  # 🌐 مهمة بناء الأندرويد والويب (نظام Ubuntu)
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm install
+      - run: npm run build
+      - run: npx cap sync
+      - uses: actions/setup-java@v4
+        with: { distribution: 'zulu', java-version: '17' }
+      
+      # بناء نسخة الـ APK والـ AAB الرسمية
+      - name: Build Release App
+        run: |
+          cd android
+          ./gradlew assembleRelease bundleRelease
+        env:
+          # ربط المصنع بالخزنة السرية التي أعددناها
+          ANDROID_KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASSWORD }}
+          ANDROID_KEY_PASS: ${{ secrets.KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Rased-Android-Bundle-AAB
+          path: android/app/build/outputs/bundle/release/*.aab
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Rased-Web-Deployment
+          path: dist/
+
+  # 🪟 مهمة بناء نسخة الويندوز (نظام Windows)
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm install
+      - run: npm run build
+      - name: Build EXE
+        run: npm run electron:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Rased-Windows-EXE
+          path: release/*.exe

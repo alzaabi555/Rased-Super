@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 💉 متغيرات ثيم المعلم محقونة هنا لتعمل المنظومة بأكملها بدون أخطاء */
+:root {
+  --primary: #f59e0b;
+  --secondary: #78350f;
+  --bg: #f8fafc;
+  --card: #ffffff;
+  --text: #1e293b;
+  --border: #e2e8f0;
+  --glass: rgba(255, 255, 255, 0.8);
+  --glow: rgba(245, 158, 11, 0.2);
+}
+
+body {
+  font-family: 'Tahoma', sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* لإخفاء شريط التمرير المزعج */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
