@@ -1,6 +1,7 @@
 import React from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
+import { Home, Users, School, GraduationCap, UserCircle2 } from 'lucide-react';
 
 // 💉 استيراد كافة أفراد العائلة
 import TeacherApp from "./apps/teacher/App.tsx";
