@@ -21,8 +21,8 @@ function GlobalHomeButton() {
  return (
     <button
       onClick={() => window.location.hash = '#/'}
-      /* 💉 الحقنة هنا: مسافة 1.5rem (تعادل top-6) مضافاً إليها مساحة الكاميرا */
-      style={{ top: 'calc(1.5rem + env(safe-area-inset-top))' }}
+      /* 💉 تم تقليل المسافة ليرتفع الزر ويوازي النصوص في الأعلى */
+      style={{ top: 'max(1.2rem, calc(env(safe-area-inset-top) - 0.2rem))' }}
       className="fixed left-6 z-[99999] flex items-center justify-center w-12 h-12 bg-white/20 dark:bg-black/40 backdrop-blur-xl border border-white/30 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all duration-300"
       title="العودة للرئيسية"
     >
