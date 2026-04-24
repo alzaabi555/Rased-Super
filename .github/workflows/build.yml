@@ -54,3 +54,38 @@ jobs:
         with:
           name: Rased-Windows-EXE
           path: release/*.exe
+          
+          # 🍎 مهمة بناء نسخة الآيفون (نظام macOS) - مخصصة لسايستور
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+        
+      - name: 📦 Install Dependencies
+        run: npm install
+        
+      - name: 🌐 Build Web
+        run: npm run build
+        
+      - name: 🔄 Sync iOS
+        run: npx cap sync ios
+        
+      - name: 🔨 Build Xcode Project (No Code Sign)
+        run: |
+          cd ios/App
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -sdk iphoneos CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+          
+      - name: 📦 Package into IPA
+        run: |
+          mkdir -p Payload
+          mv ios/App/build/Release-iphoneos/App.app Payload/
+          zip -r Rased-iOS.ipa Payload
+          
+      - name: 📲 Upload iOS IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: Rased-iOS-IPA
+          path: Rased-iOS.ipa
