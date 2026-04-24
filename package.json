@@ -42,6 +42,7 @@
   },
   "build": {
     "appId": "com.rasedsuper.app",
+    "icon": "build/icon.png",
     "files": ["dist/**/*", "main.cjs"],
     "directories": { "output": "release" },
     "win": { "target": "portable" }
