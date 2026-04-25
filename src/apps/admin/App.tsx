@@ -8,6 +8,9 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
 
+// 💉 1. استدعاء مخزن الإدارة
+import { AdminProvider, useAdmin } from './context/AdminContext';
+
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZHhZ-RPWUpBGIlw0qTFPUmOPmq9WpcvW4WLklcjb_A9U3MW0luIXYPnHznI29ThpbMA/exec"; 
 
 type Section = 'dashboard' | 'reports' | 'search' | 'settings';
@@ -31,7 +34,6 @@ const isSameDate = (dateString: string, compareDate: Date) => {
   return (str.includes(day) || str.includes(arDay)) && (str.includes(month) || str.includes(arMonth));
 };
 
-// 💉 تحديث مُولد الوثائق لدعم تقارير الطلاب والمعلمين معاً
 const generateOfficialReport = (title: string, dataList: any[], schoolName: string, dateStr: string, type: 'students' | 'teachers' = 'students') => {
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
@@ -117,7 +119,7 @@ const generateOfficialReport = (title: string, dataList: any[], schoolName: stri
        </div>
 
        <div class="footer-note">
-          تم استخراج هذا التقرير إلكترونياً من نظام راصد - برمجة وتطوير: محمد الزعابي
+          تم استخراج هذا التقرير إلكترونياً من نظام راصد - برمجة وتطوير: ALZZABI MOHAMMAD
        </div>
 
        <script>
@@ -134,20 +136,32 @@ const generateOfficialReport = (title: string, dataList: any[], schoolName: stri
   printWindow.document.close();
 };
 
+// =========================================================
+// 💉 2. المكون الجذري للتطبيق يغلف البوابة بالمخزن
+// =========================================================
 export default function App() {
+  return (
+    <AdminProvider>
+      <AdminDashboardCore />
+    </AdminProvider>
+  );
+}
+
+// =========================================================
+// 3. قلب النظام الداخلي المتصل بالمخزن والسحابة
+// =========================================================
+function AdminDashboardCore() {
+  const { dashboardData, setDashboardData, isDataLoaded } = useAdmin(); // 💉 ربط المخزن
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  // 💉 استرجاع الكود المحفوظ تلقائياً
   const [schoolCode, setSchoolCode] = useState(() => localStorage.getItem('rased_admin_code') || '');
   const [schoolName, setSchoolName] = useState(() => localStorage.getItem('rased_school_name') || '');
+  const [activeSection, setActiveSection] = useState<Section>('dashboard');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
     localStorage.setItem('rased_school_name', schoolName);
   }, [schoolName]);
-
-  const [activeSection, setActiveSection] = useState<Section>('dashboard');
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [dashboardData, setDashboardData] = useState({ teachers: [], logs: [] });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,16 +173,22 @@ export default function App() {
       const response = await fetch(`${SCRIPT_URL}?schoolCode=${schoolCode}&t=${cacheBuster}`);
       const result = await response.json();
       if (result.status === "success") {
+        // 💉 حفظ البيانات الجديدة في المخزن
         setDashboardData(result.data);
         setIsLoggedIn(true);
-        // 💉 حفظ كود المدرسة بنجاح في الذاكرة لتسهيل الدخول القادم
         localStorage.setItem('rased_admin_code', schoolCode);
       } else {
         setErrorMsg('حدث خطأ من السيرفر: ' + result.message);
       }
     } catch (error) {
       console.error("تفاصيل الخطأ:", error); 
-      setErrorMsg('تأكد من اتصالك بالإنترنت ومن صحة الرابط');
+      // 💉 درع الطوارئ: إذا فشل الاتصال بالسحابة ولديه بيانات مؤرشفة
+      if (dashboardData.logs && dashboardData.logs.length > 0) {
+        setIsLoggedIn(true);
+        alert("⚠️ انتباه: تعذر الاتصال بالسحابة. أنت تتصفح الآن 'النسخة المؤرشفة' محلياً في جهازك.");
+      } else {
+        setErrorMsg('تأكد من اتصالك بالإنترنت ومن صحة الرابط');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -176,9 +196,7 @@ export default function App() {
 
   const handleLogout = () => {
     setIsLoggedIn(false);
-    // 💉 عند الخروج لا نمسح الكود ليبقى جاهزاً، فقط نمسح الجلسة
     setActiveSection('dashboard');
-    setDashboardData({ teachers: [], logs: [] });
   };
 
   if (!isLoggedIn) return <LoginScreen schoolCode={schoolCode} setSchoolCode={setSchoolCode} onLogin={handleLogin} isLoading={isLoading} errorMsg={errorMsg} />;
@@ -211,7 +229,7 @@ export default function App() {
 }
 
 // =========================================================
-// 1️⃣ اللوحة الرئيسية
+// المكونات الفرعية (تم الحفاظ عليها بالكامل كما هي!)
 // =========================================================
 function DashboardHome({ data, schoolName }: { data: any, schoolName: string }) {
   const [activeTab, setActiveTab] = useState<'absent' | 'late' | 'truant'>('absent');
@@ -275,7 +293,6 @@ function DashboardHome({ data, schoolName }: { data: any, schoolName: string }) 
     generateOfficialReport('التقرير اليومي لرصد المخالفات', combinedData, schoolName, dateStr, 'students');
   };
 
-  // 💉 دالة طباعة تقرير المعلمين المتأخرين
   const handlePrintLateTeachers = () => {
     const dateStr = todayDate.toLocaleDateString('ar-OM');
     generateOfficialReport('كشف المعلمين المتأخرين عن رصد غياب الحصة الأولى', lateTeachers, schoolName, dateStr, 'teachers');
@@ -312,7 +329,6 @@ function DashboardHome({ data, schoolName }: { data: any, schoolName: string }) 
               <h2 className="text-xl font-black text-slate-800">تأخر رصد اليوم</h2>
             </div>
             
-            {/* 💉 زر طباعة تقرير المعلمين بجانب العنوان */}
             {lateTeachers.length > 0 && (
               <button 
                 onClick={handlePrintLateTeachers}
@@ -387,9 +403,6 @@ function DashboardHome({ data, schoolName }: { data: any, schoolName: string }) 
   );
 }
 
-// =========================================================
-// 2️⃣ صفحة أرشيف التقارير
-// =========================================================
 function ReportsPage({ data, schoolName }: { data: any, schoolName: string }) {
   const [selectedDateStr, setSelectedDateStr] = useState(new Date().toISOString().split('T')[0]);
   
@@ -434,7 +447,6 @@ function ReportsPage({ data, schoolName }: { data: any, schoolName: string }) {
     });
   }, [data, selectedDateStr]);
 
-  // 💉 زر الطباعة للأرشيف
   const handlePrintArchive = () => {
     let combinedData: any[] = [];
     reportData.forEach((row: any) => {
@@ -519,7 +531,6 @@ function ReportsPage({ data, schoolName }: { data: any, schoolName: string }) {
   );
 }
 
-// === المكونات المساعدة للواجهة ===
 function SearchPage({ data }: { data: any }) {
   const [searchQuery, setSearchQuery] = useState('');
 
