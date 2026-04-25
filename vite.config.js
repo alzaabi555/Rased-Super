@@ -5,5 +5,5 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   // 💉 الحقنة الوقائية: هذا السطر يمنع الشاشة البيضاء في تطبيقات الهاتف
-  base: './', 
+ base: './', //
 })
