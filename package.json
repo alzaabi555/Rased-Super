@@ -52,9 +52,10 @@
       "output": "release"
     },
     "win": {
-      "target": [
+     "target": [
         "nsis"
-      ]
+      ],
+      "icon": "icon.png"
     },
     "nsis": {
       "oneClick": false,
@@ -64,8 +65,8 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "منظومة راصد",
-      "installerIcon": "build/icon.ico",
-      "uninstallerIcon": "build/icon.ico",
+      "installerIcon": "build/icon.png",
+      "uninstallerIcon": "buildicon.png",
       "deleteAppDataOnUninstall": false
     }
   }
