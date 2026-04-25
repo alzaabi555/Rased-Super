@@ -9,7 +9,8 @@ function createWindow() {
       nodeIntegration: true,
     },
   });
-
+// 💉 هذا هو السطر السحري الذي سيخفي شريط (File, Edit, View) المزعج!
+  win.removeMenu();
   // تحميل ملف الويب الذي يبنيه Vite
   win.loadFile(path.join(__dirname, 'dist/index.html'));
 }
