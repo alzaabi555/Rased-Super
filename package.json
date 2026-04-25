@@ -43,7 +43,7 @@
   "build": {
     "appId": "com.rasedsuper.app",
     "productName": "منظومة راصد",
-    "icon": "build/icon.png",
+    "icon": "icon.png",
     "files": [
       "dist/**/*",
       "main.cjs"
@@ -52,10 +52,10 @@
       "output": "release"
     },
     "win": {
-     "target": [
+      "target": [
         "nsis"
       ],
-      "icon": "icon.png"
+      "icon": "icon.ico"
     },
     "nsis": {
       "oneClick": false,
@@ -65,8 +65,8 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "منظومة راصد",
-      "installerIcon": "build/icon.png",
-      "uninstallerIcon": "buildicon.png",
+      "installerIcon": "icon.ico",
+      "uninstallerIcon": "icon.ico",
       "deleteAppDataOnUninstall": false
     }
   }
