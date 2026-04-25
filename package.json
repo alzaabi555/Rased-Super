@@ -42,9 +42,30 @@
   },
   "build": {
     "appId": "com.rasedsuper.app",
+    "productName": "منظومة راصد",
     "icon": "build/icon.png",
-    "files": ["dist/**/*", "main.cjs"],
-    "directories": { "output": "release" },
-    "win": { "target": "portable" }
+    "files": [
+      "dist/**/*",
+      "main.cjs"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowElevation": true,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "منظومة راصد",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false
+    }
   }
-}
