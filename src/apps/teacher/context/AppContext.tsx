@@ -2,7 +2,6 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import type { Student, ScheduleDay, PeriodTime, Group, AssessmentTool, CertificateSettings, GradeSettings, GroupCategorization } from '../types';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Capacitor } from '@capacitor/core';
-// ✅ 1. استيراد القاموس من الملف الخارجي
 import { translations } from './translations'; 
 
 type Language = 'ar' | 'en';
@@ -58,13 +57,15 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const DBFILENAME = 'raseddatabasev2.json';
+// 💉 1. تغيير اسم ملف قاعدة البيانات ليكون خاصاً بالمعلم فقط!
+const DBFILENAME = 'teacher_raseddatabasev2.json';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
+  // 💉 2. إضافة بادئة "teacher_" لكل مفاتيح التخزين
   const [language, setLanguage] = useState<Language>(
-    (localStorage.getItem('appLanguage') as Language) || 'ar'
+    (localStorage.getItem('teacher_appLanguage') as Language) || 'ar'
   );
 
   const currentMonth = new Date().getMonth();
@@ -145,33 +146,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         if (!data) {
-          const lsStudents = localStorage.getItem('studentData');
+          // 💉 3. جلب البيانات باستخدام المفاتيح المعزولة "teacher_"
+          const lsStudents = localStorage.getItem('teacher_studentData');
           if (lsStudents) {
             data = {
               students: JSON.parse(lsStudents),
-              classes: JSON.parse(localStorage.getItem('classesData') || '[]'),
-              hiddenClasses: JSON.parse(localStorage.getItem('hiddenClasses') || '[]'),
-              groups: JSON.parse(localStorage.getItem('groupsData') || '[]'),
-              categorizations: JSON.parse(localStorage.getItem('categorizationsData') || '[]'),
-              schedule: JSON.parse(localStorage.getItem('scheduleData') || '[]'),
-              periodTimes: JSON.parse(localStorage.getItem('periodTimes') || '[]'),
-              assessmentTools: JSON.parse(localStorage.getItem('assessmentTools') || '[]'),
-              gradeSettings: JSON.parse(localStorage.getItem('gradeSettings') || 'null'),
-              currentSemester: localStorage.getItem('currentSemester'),
+              classes: JSON.parse(localStorage.getItem('teacher_classesData') || '[]'),
+              hiddenClasses: JSON.parse(localStorage.getItem('teacher_hiddenClasses') || '[]'),
+              groups: JSON.parse(localStorage.getItem('teacher_groupsData') || '[]'),
+              categorizations: JSON.parse(localStorage.getItem('teacher_categorizationsData') || '[]'),
+              schedule: JSON.parse(localStorage.getItem('teacher_scheduleData') || '[]'),
+              periodTimes: JSON.parse(localStorage.getItem('teacher_periodTimes') || '[]'),
+              assessmentTools: JSON.parse(localStorage.getItem('teacher_assessmentTools') || '[]'),
+              gradeSettings: JSON.parse(localStorage.getItem('teacher_gradeSettings') || 'null'),
+              currentSemester: localStorage.getItem('teacher_currentSemester'),
               teacherInfo: {
-                name: localStorage.getItem('teacherName') || '',
-                school: localStorage.getItem('schoolName') || '',
-                subject: localStorage.getItem('subjectName') || '',
-                governorate: localStorage.getItem('governorate') || '',
-                avatar: localStorage.getItem('teacherAvatar') || '',
-                stamp: localStorage.getItem('teacherStamp') || '',
-                ministryLogo: localStorage.getItem('ministryLogo') || '',
-                academicYear: localStorage.getItem('academicYear') || defaultAcademicYear,
-                gender: localStorage.getItem('teacherGender') || 'male',
-                civilId: localStorage.getItem('civilId') || '',
+                name: localStorage.getItem('teacher_teacherName') || '',
+                school: localStorage.getItem('teacher_schoolName') || '',
+                subject: localStorage.getItem('teacher_subjectName') || '',
+                governorate: localStorage.getItem('teacher_governorate') || '',
+                avatar: localStorage.getItem('teacher_teacherAvatar') || '',
+                stamp: localStorage.getItem('teacher_teacherStamp') || '',
+                ministryLogo: localStorage.getItem('teacher_ministryLogo') || '',
+                academicYear: localStorage.getItem('teacher_academicYear') || defaultAcademicYear,
+                gender: localStorage.getItem('teacher_teacherGender') || 'male',
+                civilId: localStorage.getItem('teacher_civilId') || '',
               },
-              certificateSettings: JSON.parse(localStorage.getItem('certificateSettings') || 'null'),
-              defaultStudentGender: localStorage.getItem('defaultStudentGender') || 'male',
+              certificateSettings: JSON.parse(localStorage.getItem('teacher_certificateSettings') || 'null'),
+              defaultStudentGender: localStorage.getItem('teacher_defaultStudentGender') || 'male',
             };
           }
         }
@@ -229,21 +231,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       try {
-        localStorage.setItem('lastLocalUpdate', Date.now().toString());
-        localStorage.setItem('teacherName', teacherInfo.name || '');
-        localStorage.setItem('schoolName', teacherInfo.school || '');
-        localStorage.setItem('subjectName', teacherInfo.subject || '');
-        localStorage.setItem('academicYear', teacherInfo.academicYear || '');
-        localStorage.setItem('currentSemester', String(currentSemester));
-        localStorage.setItem('defaultStudentGender', defaultStudentGender);
-        localStorage.setItem('civilId', teacherInfo.civilId || '');
-        localStorage.setItem('appLanguage', language);
+        // 💉 4. حفظ البيانات باستخدام المفاتيح المعزولة "teacher_"
+        localStorage.setItem('teacher_lastLocalUpdate', Date.now().toString());
+        localStorage.setItem('teacher_teacherName', teacherInfo.name || '');
+        localStorage.setItem('teacher_schoolName', teacherInfo.school || '');
+        localStorage.setItem('teacher_subjectName', teacherInfo.subject || '');
+        localStorage.setItem('teacher_academicYear', teacherInfo.academicYear || '');
+        localStorage.setItem('teacher_currentSemester', String(currentSemester));
+        localStorage.setItem('teacher_defaultStudentGender', defaultStudentGender);
+        localStorage.setItem('teacher_civilId', teacherInfo.civilId || '');
+        localStorage.setItem('teacher_appLanguage', language);
 
         if (!isHeavy) {
-            localStorage.setItem('studentData', JSON.stringify(students));
-            localStorage.setItem('classesData', JSON.stringify(classes));
-            localStorage.setItem('assessmentTools', JSON.stringify(assessmentTools));
-            localStorage.setItem('categorizationsData', JSON.stringify(categorizations));
+            localStorage.setItem('teacher_studentData', JSON.stringify(students));
+            localStorage.setItem('teacher_classesData', JSON.stringify(classes));
+            localStorage.setItem('teacher_assessmentTools', JSON.stringify(assessmentTools));
+            localStorage.setItem('teacher_categorizationsData', JSON.stringify(categorizations));
         }
       } catch (e) {}
     }, 2000); 
@@ -251,7 +254,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => { if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current); };
   }, [students, classes, hiddenClasses, groups, schedule, periodTimes, teacherInfo, currentSemester, assessmentTools, gradeSettings, certificateSettings, defaultStudentGender, categorizations, language]);
 
-  // ✅ 2. محرك الترجمة يعتمد على الملف الخارجي
   const t = (key: keyof typeof translations['ar'] | string): string => {
     return (translations[language] as any)[key] || key;
   };
