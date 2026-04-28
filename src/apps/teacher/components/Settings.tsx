@@ -20,7 +20,6 @@ const Settings = () => {
     certificateSettings, setCertificateSettings, hiddenClasses, setHiddenClasses,
     groups, setGroups, categorizations, setCategorizations, gradeSettings, setGradeSettings,
     language, setLanguage, t, dir,
-    // 💉 استدعاء المهام والمكتبة من السياق
     tasks, setTasks, library, setLibrary
   } = useApp();
 
@@ -43,7 +42,6 @@ const Settings = () => {
       setCivilId(teacherInfo?.civilId || '');
   }, [teacherInfo]);
 
-  // 💉 الجراحة الأولى: تأمين التصدير
   const handleBackup = async () => {
     setLoading('backup');
     try {
@@ -51,7 +49,6 @@ const Settings = () => {
         version: '3.8.7', timestamp: new Date().toISOString(),
         students, classes, hiddenClasses, groups, schedule, periodTimes, 
         teacherInfo, assessmentTools, certificateSettings, categorizations, gradeSettings,
-        // 💉 حشو البيانات الجديدة في الحقيبة
         tasks, library,
         assessmentPlan: JSON.parse(localStorage.getItem('rased_assessment_plan') || 'null'),
         termPlan: JSON.parse(localStorage.getItem('rased_term_plan') || 'null')
@@ -71,7 +68,7 @@ const Settings = () => {
       alert(t('alertExportSuccess'));
     } catch (error) { alert(t('alertExportError')); } finally { setLoading(null); setActiveDrawer(null); }
   };
-// 💉 الجراحة الثانية: تأمين الاستيراد (النسخة النهائية المتوافقة مع Super App)
+
   const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !confirm(t('alertConfirmRestore'))) return;
@@ -82,7 +79,6 @@ const Settings = () => {
         try {
             const data = JSON.parse(event.target?.result as string);
             if (data.students) {
-                // 1. حقن البيانات في الذاكرة الحية لكي تظهر فوراً في الشاشة
                 setStudents(data.students); 
                 setClasses(data.classes || []);
                 if(data.hiddenClasses) setHiddenClasses(data.hiddenClasses);
@@ -101,15 +97,10 @@ const Settings = () => {
                 if(data.assessmentPlan) localStorage.setItem('teacher_assessment_plan', JSON.stringify(data.assessmentPlan));
                 if(data.termPlan) localStorage.setItem('teacher_term_plan', JSON.stringify(data.termPlan));
 
-                // 2. 🛡️ الدعامة الأمنية: التفريق بين التطبيق والمتصفح
                 if (Capacitor.isNativePlatform() || (window as any).electron !== undefined) {
-                    // 💉 استخدام اسم الملف الخاص بالمعلم فقط!
                     await Filesystem.writeFile({ path: 'teacher_raseddatabasev2.json', data: event.target?.result as string, directory: Directory.Data, encoding: Encoding.UTF8 });
                     alert(t('alertRestoreSuccess'));
-                    // 🛑 إزالة รีفريش العنيف (reload) لأنه يطرد المستخدم للشاشة الرئيسية للـ Super App
-                    // بدلاً من ذلك، الريأكت سيحدث الواجهة تلقائياً بسبب setStudents وغيرها أعلاه!
                 } else {
-                    // 💉 استخدام البادئة teacher_ لكل المفاتيح
                     localStorage.setItem('teacher_studentData', JSON.stringify(data.students));
                     localStorage.setItem('teacher_classesData', JSON.stringify(data.classes || []));
                     if(data.teacherInfo) {
@@ -133,12 +124,10 @@ const Settings = () => {
     reader.readAsText(file);
   };
 
-  // 💉 تحديث دالة "ضبط المصنع" أيضاً لتمسح الملف الصحيح
   const handleFactoryReset = async () => {
       if (!confirm(t('alertConfirmReset'))) return;
       setLoading('reset');
       try {
-          // مسح المفاتيح التي تبدأ بـ teacher_ فقط
           for (let i = localStorage.length - 1; i >= 0; i--) {
             const key = localStorage.key(i);
             if (key && key.startsWith('teacher_')) {
@@ -146,26 +135,10 @@ const Settings = () => {
             }
           }
           if (Capacitor.isNativePlatform() || (window as any).electron) {
-              // 💉 مسح ملف المعلم فقط وليس ملفات التطبيقات الأخرى
               await Filesystem.deleteFile({ path: 'teacher_raseddatabasev2.json', directory: Directory.Data }).catch(() => {});
           }
           alert(t('alertResetSuccess'));
-          window.location.hash = '#/'; // العودة بسلام للشاشة الرئيسية بعد الفورمات
-          window.location.reload();
-      } catch (e) { alert('Error'); } finally { setLoading(null); setActiveDrawer(null); }
-  };
-    reader.readAsText(file);
-  };
-
-  const handleFactoryReset = async () => {
-      if (!confirm(t('alertConfirmReset'))) return;
-      setLoading('reset');
-      try {
-          localStorage.clear();
-          if (Capacitor.isNativePlatform() || (window as any).electron) {
-              await Filesystem.deleteFile({ path: 'raseddatabasev2.json', directory: Directory.Data }).catch(() => {});
-          }
-          alert(t('alertResetSuccess'));
+          window.location.hash = '#/'; 
           window.location.reload();
       } catch (e) { alert('Error'); } finally { setLoading(null); setActiveDrawer(null); }
   };
