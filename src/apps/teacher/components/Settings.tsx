@@ -71,8 +71,7 @@ const Settings = () => {
       alert(t('alertExportSuccess'));
     } catch (error) { alert(t('alertExportError')); } finally { setLoading(null); setActiveDrawer(null); }
   };
-
-  // 💉 الجراحة الثانية: تأمين الاستيراد (النسخة النهائية المضادة للفشل)
+// 💉 الجراحة الثانية: تأمين الاستيراد (النسخة النهائية المتوافقة مع Super App)
   const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !confirm(t('alertConfirmRestore'))) return;
@@ -88,7 +87,7 @@ const Settings = () => {
                 setClasses(data.classes || []);
                 if(data.hiddenClasses) setHiddenClasses(data.hiddenClasses);
                 
-                if(data.groups) { setGroups(data.groups); localStorage.setItem('rased_groups', JSON.stringify(data.groups)); }
+                if(data.groups) { setGroups(data.groups); localStorage.setItem('teacher_groupsData', JSON.stringify(data.groups)); }
                 if(data.categorizations) setCategorizations(data.categorizations);
                 if(data.schedule) setSchedule(data.schedule);
                 if(data.periodTimes) setPeriodTimes(data.periodTimes);
@@ -97,28 +96,31 @@ const Settings = () => {
                 if(data.certificateSettings) setCertificateSettings(data.certificateSettings);
                 if(data.gradeSettings) setGradeSettings(data.gradeSettings);
                 
-                if(data.tasks) { if(setTasks) setTasks(data.tasks); localStorage.setItem('rased_tasks', JSON.stringify(data.tasks)); }
-                if(data.library) { if(setLibrary) setLibrary(data.library); localStorage.setItem('rased_library', JSON.stringify(data.library)); }
-                if(data.assessmentPlan) localStorage.setItem('rased_assessment_plan', JSON.stringify(data.assessmentPlan));
-                if(data.termPlan) localStorage.setItem('rased_term_plan', JSON.stringify(data.termPlan));
+                if(data.tasks) { if(setTasks) setTasks(data.tasks); localStorage.setItem('teacher_tasksData', JSON.stringify(data.tasks)); }
+                if(data.library) { if(setLibrary) setLibrary(data.library); localStorage.setItem('teacher_libraryData', JSON.stringify(data.library)); }
+                if(data.assessmentPlan) localStorage.setItem('teacher_assessment_plan', JSON.stringify(data.assessmentPlan));
+                if(data.termPlan) localStorage.setItem('teacher_term_plan', JSON.stringify(data.termPlan));
 
                 // 2. 🛡️ الدعامة الأمنية: التفريق بين التطبيق والمتصفح
                 if (Capacitor.isNativePlatform() || (window as any).electron !== undefined) {
-                    // في حالة التطبيق المثبت (Android/iOS/Windows): يحفظ في ملف النظام ويعمل ريفريش
-                    await Filesystem.writeFile({ path: 'raseddatabasev2.json', data: event.target?.result as string, directory: Directory.Data, encoding: Encoding.UTF8 });
+                    // 💉 استخدام اسم الملف الخاص بالمعلم فقط!
+                    await Filesystem.writeFile({ path: 'teacher_raseddatabasev2.json', data: event.target?.result as string, directory: Directory.Data, encoding: Encoding.UTF8 });
                     alert(t('alertRestoreSuccess'));
-                    setTimeout(() => window.location.reload(), 1000);
+                    // 🛑 إزالة รีفريش العنيف (reload) لأنه يطرد المستخدم للشاشة الرئيسية للـ Super App
+                    // بدلاً من ذلك، الريأكت سيحدث الواجهة تلقائياً بسبب setStudents وغيرها أعلاه!
                 } else {
-                    // في حالة المتصفح (Web / Vercel):
-                    // نحقن البيانات الأساسية في الذاكرة العميقة للمتصفح فوراً لحمايتها
-                    localStorage.setItem('rased_students', JSON.stringify(data.students));
-                    localStorage.setItem('rased_classes', JSON.stringify(data.classes || []));
-                    if(data.teacherInfo) localStorage.setItem('rased_teacher_info', JSON.stringify(data.teacherInfo));
-                    if(data.schedule) localStorage.setItem('rased_schedule', JSON.stringify(data.schedule));
-                    if(data.periodTimes) localStorage.setItem('rased_period_times', JSON.stringify(data.periodTimes));
+                    // 💉 استخدام البادئة teacher_ لكل المفاتيح
+                    localStorage.setItem('teacher_studentData', JSON.stringify(data.students));
+                    localStorage.setItem('teacher_classesData', JSON.stringify(data.classes || []));
+                    if(data.teacherInfo) {
+                       localStorage.setItem('teacher_teacherName', data.teacherInfo.name || '');
+                       localStorage.setItem('teacher_schoolName', data.teacherInfo.school || '');
+                       localStorage.setItem('teacher_civilId', data.teacherInfo.civilId || '');
+                    }
+                    if(data.schedule) localStorage.setItem('teacher_scheduleData', JSON.stringify(data.schedule));
+                    if(data.periodTimes) localStorage.setItem('teacher_periodTimes', JSON.stringify(data.periodTimes));
                     
                     alert(t('alertRestoreSuccess') + " 🚀");
-                    // 🛑 لا نقوم بعمل ريفريش هنا! الريأكت سيقوم بعرض الطلاب فور إغلاق هذه الرسالة
                 }
             }
         } catch (error) { 
@@ -128,6 +130,30 @@ const Settings = () => {
             setActiveDrawer(null); 
         }
     };
+    reader.readAsText(file);
+  };
+
+  // 💉 تحديث دالة "ضبط المصنع" أيضاً لتمسح الملف الصحيح
+  const handleFactoryReset = async () => {
+      if (!confirm(t('alertConfirmReset'))) return;
+      setLoading('reset');
+      try {
+          // مسح المفاتيح التي تبدأ بـ teacher_ فقط
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const key = localStorage.key(i);
+            if (key && key.startsWith('teacher_')) {
+              localStorage.removeItem(key);
+            }
+          }
+          if (Capacitor.isNativePlatform() || (window as any).electron) {
+              // 💉 مسح ملف المعلم فقط وليس ملفات التطبيقات الأخرى
+              await Filesystem.deleteFile({ path: 'teacher_raseddatabasev2.json', directory: Directory.Data }).catch(() => {});
+          }
+          alert(t('alertResetSuccess'));
+          window.location.hash = '#/'; // العودة بسلام للشاشة الرئيسية بعد الفورمات
+          window.location.reload();
+      } catch (e) { alert('Error'); } finally { setLoading(null); setActiveDrawer(null); }
+  };
     reader.readAsText(file);
   };
 
