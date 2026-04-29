@@ -57,13 +57,25 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// 💉 1. تغيير اسم ملف قاعدة البيانات ليكون خاصاً بالمعلم فقط!
 const DBFILENAME = 'teacher_raseddatabasev2.json';
+
+// 💉 1. خوارزمية توليد الأكواد العشوائية الآمنة (نستبعد الحروف المتشابهة مثل O و 0 و I و 1)
+const generateRasedId = (existingIds: string[]) => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let newId;
+  do {
+    let code = '';
+    for (let i = 0; i < 4; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    newId = `RSD-${code}`;
+  } while (existingIds.includes(newId)); // التأكد من عدم تكرار الكود
+  return newId;
+};
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
 
-  // 💉 2. إضافة بادئة "teacher_" لكل مفاتيح التخزين
   const [language, setLanguage] = useState<Language>(
     (localStorage.getItem('teacher_appLanguage') as Language) || 'ar'
   );
@@ -146,7 +158,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         if (!data) {
-          // 💉 3. جلب البيانات باستخدام المفاتيح المعزولة "teacher_"
           const lsStudents = localStorage.getItem('teacher_studentData');
           if (lsStudents) {
             data = {
@@ -179,7 +190,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         if (data) {
-          if (data.students) setStudents(data.students);
+          // 💉 2. المهاجر السري (Silent Migrator): حقن أكواد RSD للطلاب القدامى
+          if (data.students && data.students.length > 0) {
+            let needsMigration = false;
+            const existingIds = data.students.map((s: any) => s.rasedId).filter(Boolean);
+            
+            const migratedStudents = data.students.map((student: any) => {
+              if (!student.rasedId) {
+                needsMigration = true;
+                const newId = generateRasedId(existingIds);
+                existingIds.push(newId);
+                return { ...student, rasedId: newId }; // إضافة الكود مع الاحتفاظ بكل البيانات القديمة
+              }
+              return student;
+            });
+
+            setStudents(migratedStudents);
+            // بمجرد أن نضع migratedStudents في state، سيقوم الـ useEffect الخاص بالحفظ بتحديث القاعدة تلقائياً!
+          } else {
+            setStudents([]);
+          }
+
           if (data.classes) setClasses(data.classes);
           if (data.hiddenClasses) setHiddenClasses(data.hiddenClasses);
           if (data.groups) setGroups(data.groups);
@@ -231,7 +262,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
 
       try {
-        // 💉 4. حفظ البيانات باستخدام المفاتيح المعزولة "teacher_"
         localStorage.setItem('teacher_lastLocalUpdate', Date.now().toString());
         localStorage.setItem('teacher_teacherName', teacherInfo.name || '');
         localStorage.setItem('teacher_schoolName', teacherInfo.school || '');
