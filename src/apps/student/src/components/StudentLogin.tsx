@@ -1,18 +1,18 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { 
-  Shield, Fingerprint, ArrowRight, ArrowLeft, 
+  Shield, Key, ArrowRight, ArrowLeft, 
   Sparkles, Gamepad2, Loader2 
-} from 'lucide-react';
+} from 'lucide-react'; // 💉 تم تغيير Fingerprint إلى Key
 
 interface StudentLoginProps {
-  onLogin: (civilId: string) => void;
+  onLogin: (secretCode: string) => void; // 💉 تغيير إلى secretCode
 }
 
 const StudentLogin: React.FC<StudentLoginProps> = ({ onLogin }) => {
   const { t, dir } = useApp();
-  // 💉 استدعاء الرقم المحفوظ من الذاكرة فور فتح التطبيق
-  const [civilId, setCivilId] = useState(() => localStorage.getItem('last_civil_id') || '');
+  // 💉 استدعاء الكود المحفوظ من الذاكرة فور فتح التطبيق بدلاً من الرقم المدني
+  const [secretCode, setSecretCode] = useState(() => localStorage.getItem('last_secret_code') || '');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -22,9 +22,11 @@ const StudentLogin: React.FC<StudentLoginProps> = ({ onLogin }) => {
     e.preventDefault();
     setError('');
 
-    // تحقق بسيط من أن الرقم المدني ليس فارغاً
-    if (!civilId.trim() || civilId.length < 5) {
-      setError(t('invalidCivilId') || 'يرجى إدخال رقم مدني صحيح.');
+    const sanitizedCode = secretCode.trim().toUpperCase();
+
+    // تحقق من أن الكود ليس فارغاً
+    if (!sanitizedCode || sanitizedCode.length < 5) {
+      setError(t('invalidSecretCode') || 'يرجى إدخال كود سري صحيح (مثال: RSD-A7X9).');
       return;
     }
 
@@ -32,7 +34,9 @@ const StudentLogin: React.FC<StudentLoginProps> = ({ onLogin }) => {
     setIsLoading(true);
     setTimeout(() => {
       setIsLoading(false);
-      onLogin(civilId); 
+      // حفظ الكود في الذاكرة لتسهيل الدخول القادم
+      localStorage.setItem('last_secret_code', sanitizedCode);
+      onLogin(sanitizedCode); 
     }, 1500);
   };
 
@@ -70,29 +74,28 @@ const StudentLogin: React.FC<StudentLoginProps> = ({ onLogin }) => {
           {t('welcomeBack') || 'أهلاً بك يا بطل! 🚀'}
         </h2>
         <p className="text-xs font-bold text-indigo-200/60 text-center mb-8 leading-relaxed">
-          {t('enterCivilIdToStart') || 'أدخل رقمك المدني لتبدأ المغامرة وتحصد النقاط'}
+          {t('enterSecretCodeToStart') || 'أدخل كود راصد السري لتبدأ المغامرة وتحصد النقاط'}
         </p>
 
         <form onSubmit={handleLogin} className="space-y-6">
           
-          {/* حقل الرقم المدني */}
+          {/* 💉 حقل الكود السري الجديد */}
           <div className="relative">
             <div className="relative group">
               <div className="absolute inset-y-0 flex items-center pointer-events-none px-5 text-indigo-300/40 group-focus-within:text-cyan-400 transition-colors z-10">
-                <Fingerprint className="w-6 h-6 drop-shadow-sm" />
+                <Key className="w-6 h-6 drop-shadow-sm" />
               </div>
               <input
-                type="number"
-                value={civilId}
-                onChange={(e) => setCivilId(e.target.value)}
-                placeholder={t('civilIdPlaceholder') || 'الرقم المدني'}
-                className={`w-full bg-black/20 text-white text-center text-xl font-black tracking-widest py-4 px-14 rounded-[1.5rem] outline-none border transition-all duration-300 shadow-inner placeholder:text-indigo-200/30 placeholder:font-bold ${
+                type="text"
+                value={secretCode}
+                onChange={(e) => setSecretCode(e.target.value.toUpperCase())}
+                placeholder={t('secretCodePlaceholder') || 'مثال: RSD-A7X9'}
+                dir="ltr"
+                className={`w-full bg-black/20 text-white text-center text-xl font-black tracking-widest py-4 px-14 rounded-[1.5rem] outline-none border transition-all duration-300 shadow-inner placeholder:text-indigo-200/30 placeholder:font-bold placeholder:text-sm uppercase ${
                   error ? 'border-rose-500/50 bg-rose-500/10 shadow-[0_0_20px_rgba(244,63,94,0.15)]' : 'border-white/10 focus:border-cyan-400/50 focus:bg-white/10 focus:shadow-[0_0_25px_rgba(34,211,238,0.15)]'
                 }`}
-                style={{ MozAppearance: 'textfield' }} // لإخفاء أسهم الأرقام في المتصفحات
               />
             </div>
-            {/* رسالة الخطأ (متحركة) */}
             {error && (
               <p className="absolute -bottom-6 left-0 right-0 text-[10px] font-black text-rose-400 text-center animate-in slide-in-from-top-1 drop-shadow-sm">
                 {error}
@@ -100,15 +103,12 @@ const StudentLogin: React.FC<StudentLoginProps> = ({ onLogin }) => {
             )}
           </div>
 
-          {/* زر الدخول المضيء (Gamer Vibe) */}
           <button
             type="submit"
-            disabled={isLoading || !civilId.trim()}
+            disabled={isLoading || !secretCode.trim()}
             className="relative w-full group overflow-hidden rounded-[1.5rem] disabled:opacity-50 disabled:cursor-not-allowed mt-2 shadow-[0_10px_30px_rgba(0,0,0,0.3)] transition-all active:scale-[0.98]"
           >
-            {/* خلفية الزر المتدرجة */}
             <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-cyan-500 to-blue-500 transition-transform duration-500 group-hover:scale-105"></div>
-            {/* لمعة زجاجية خفيفة */}
             <div className="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent"></div>
             
             <div className="relative bg-transparent px-6 py-4 flex items-center justify-center gap-3">
@@ -127,7 +127,6 @@ const StudentLogin: React.FC<StudentLoginProps> = ({ onLogin }) => {
         </form>
       </div>
 
-      {/* 🏢 تذييل الشاشة */}
       <div className="absolute bottom-[max(env(safe-area-inset-bottom),2rem)] left-0 right-0 flex justify-center items-center gap-2 opacity-30 z-10 animate-in fade-in duration-1000 delay-500">
         <Shield className="w-4 h-4 text-indigo-200" />
         <span className="text-[10px] font-black text-indigo-200 tracking-widest uppercase">
