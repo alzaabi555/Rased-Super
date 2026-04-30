@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Save, AlertTriangle, FileJson, Trash2, 
   Download, RefreshCw, Loader2, Zap, Database, ArrowRight, Globe, Settings as SettingsIcon,
-  ChevronLeft, ChevronRight, UserCircle, Shield, UploadCloud, X
+  ChevronLeft, ChevronRight, UserCircle, Shield, UploadCloud, X, Key // 💉 تمت إضافة Key هنا
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
@@ -259,7 +259,7 @@ const Settings = () => {
         </div>
       </DrawerSheet>
 
-      {/* 👤 2. لوحة البيانات الشخصية */}
+      {/* 👤 2. لوحة البيانات الشخصية (تم تعقيمها من الرقم المدني) */}
       <DrawerSheet isOpen={activeDrawer === 'profile'} onClose={() => setActiveDrawer(null)} dir={dir} mode="side">
         <div className="flex flex-col h-full w-full">
             <div className="flex justify-between items-center px-6 pb-4 border-b border-borderColor shrink-0">
@@ -274,10 +274,23 @@ const Settings = () => {
                     <label className="text-xs font-bold px-1 text-textSecondary">{t('schoolNameLabel')}</label>
                     <input value={school} onChange={e => setSchool(e.target.value)} className="w-full rounded-xl px-4 py-3.5 outline-none text-sm font-bold transition-all border bg-bgSoft border-borderColor text-textPrimary focus:border-primary placeholder:text-textSecondary/50" placeholder={t('schoolNamePlaceholder')} />
                 </div>
-                <div className="space-y-1">
-                    <label className="text-xs font-bold px-1 flex items-center gap-1 text-amber-500"><Shield size={14}/> {t('civilIdLabel')}</label>
-                    <input type="number" value={civilId} onChange={e => setCivilId(e.target.value)} className="w-full rounded-xl px-4 py-3.5 outline-none font-mono font-black tracking-widest text-center transition-all border bg-amber-500/5 border-amber-500/20 text-textPrimary focus:border-amber-500 placeholder:text-textSecondary/50" placeholder={t('civilIdPlaceholder')} />
-                    <p className="text-[10px] text-center mt-1 text-textSecondary">{t('civilIdHint')}</p>
+                
+                {/* 💉 التمويه البصري: حقل كود المعلم السري بدلاً من الرقم المدني */}
+                <div className="space-y-1 mt-4">
+                    <label className="text-xs font-bold px-1 flex items-center gap-1 text-amber-500">
+                        <Key size={14}/> كود المعلم السري (للسحابة)
+                    </label>
+                    <input 
+                        type="text" 
+                        value={civilId} 
+                        onChange={e => setCivilId(e.target.value)} 
+                        className="w-full rounded-xl px-4 py-3.5 outline-none font-mono font-black tracking-widest text-center transition-all border bg-amber-500/5 border-amber-500/20 text-textPrimary focus:border-amber-500 placeholder:text-textSecondary/50" 
+                        placeholder="أدخل رقم هاتفك أو كود خاص بك" 
+                        dir="ltr"
+                    />
+                    <p className="text-[10px] text-center mt-1 text-textSecondary">
+                        يستخدم هذا الكود لحماية وربط نسختك الاحتياطية في السحابة المركزية
+                    </p>
                 </div>
             </div>
             <div className="p-4 border-t border-borderColor bg-bgCard shrink-0">
