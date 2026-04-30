@@ -59,18 +59,28 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const DBFILENAME = 'teacher_raseddatabasev2.json';
 
-// 💉 1. خوارزمية توليد الأكواد العشوائية الآمنة (نستبعد الحروف المتشابهة مثل O و 0 و I و 1)
-const generateRasedId = (existingIds: string[]) => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let newId;
-  do {
-    let code = '';
-    for (let i = 0; i < 4; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    newId = `RSD-${code}`;
-  } while (existingIds.includes(newId)); // التأكد من عدم تكرار الكود
-  return newId;
+// 💉 1. دالة تنظيف وتوحيد الأسماء العربية (لتجاهل الفروقات في الهمزات والمسافات بين المعلمين)
+const normalizeArabicName = (name: string) => {
+  if (!name) return '';
+  return name.replace(/[أإآءؤئ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/عبد /g, 'عبد').replace(/\s+/g, '').trim();
+};
+
+// 💉 2. التشفير البصمي السري (يعتمد على الاسم والصف فقط - بدون رقم مدني نهائياً!)
+const generateRasedId = (name: string, className: string) => {
+  if (!name || !className) {
+     // في حالة نادرة لعدم وجود اسم أو صف، نولد كود عشوائي
+     return `RSD-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+  }
+
+  const normalizedString = `${normalizeArabicName(name)}-${className}`;
+  
+  let hash = 5381;
+  for (let i = 0; i < normalizedString.length; i++) {
+    hash = (hash * 33) ^ normalizedString.charCodeAt(i);
+  }
+  
+  const code = Math.abs(hash).toString(36).toUpperCase().padStart(5, '0').substring(0, 5);
+  return `RSD-${code}`;
 };
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -190,23 +200,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         if (data) {
-          // 💉 2. المهاجر السري (Silent Migrator): حقن أكواد RSD للطلاب القدامى
+          // 💉 3. المهاجر السري: حقن أكواد RSD بناءً على (الاسم والصف) بدلاً من الهوية
           if (data.students && data.students.length > 0) {
-            let needsMigration = false;
-            const existingIds = data.students.map((s: any) => s.rasedId).filter(Boolean);
             
             const migratedStudents = data.students.map((student: any) => {
-              if (!student.rasedId) {
-                needsMigration = true;
-                const newId = generateRasedId(existingIds);
-                existingIds.push(newId);
-                return { ...student, rasedId: newId }; // إضافة الكود مع الاحتفاظ بكل البيانات القديمة
+              // مسح أي أثر للرقم المدني القديم لكي نكون متوافقين مع الوزارة 100%
+              const { civilID, parentCode, ...cleanStudent } = student; 
+
+              if (!cleanStudent.rasedId) {
+                const studentClass = cleanStudent.classes && cleanStudent.classes.length > 0 ? cleanStudent.classes[0] : 'عادي';
+                const newId = generateRasedId(cleanStudent.name, studentClass);
+                return { ...cleanStudent, rasedId: newId };
               }
-              return student;
+              return cleanStudent;
             });
 
             setStudents(migratedStudents);
-            // بمجرد أن نضع migratedStudents في state، سيقوم الـ useEffect الخاص بالحفظ بتحديث القاعدة تلقائياً!
           } else {
             setStudents([]);
           }
