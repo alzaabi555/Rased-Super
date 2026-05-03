@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Home, Power } from 'lucide-react'; // 💉 أضفنا أيقونة Power للخروج
+import { Home, Power } from 'lucide-react'; 
 
 // استيراد أوامر نظام التشغيل (لإغلاق التطبيق في الجوال)
 import { App as CapApp } from '@capacitor/app';
@@ -14,45 +14,68 @@ import ParentApp from "./apps/parent/App.tsx";
 import StudentApp from "./apps/student/App.tsx";
 
 // =========================================================
-// 💉 لوحة الأزرار العائمة (العودة للرئيسية + الخروج النهائي)
+// 💉 لوحة الأزرار العائمة (العودة للرئيسية + الخروج النهائي) 
+// (النسخة الاحترافية - Enterprise Edition)
 // =========================================================
 function GlobalFloatingButtons() {
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const isNative = Capacitor.isNativePlatform();
 
-  // دالة الخروج الذكية (تعرف إن كنت في ويندوز أو جوال)
+  // 🧠 الذكاء في العرض:
+  // - زر الرئيسية: يظهر فقط إذا لم نكن في الصفحة الرئيسية
+  // - زر الإغلاق: يظهر فقط في بيئة الويندوز/الويب (لا يظهر في الجوال أبداً)
+  const showHome = !isHome;
+  const showPower = !isNative;
+
+  // إذا كنا في الرئيسية من الجوال، لا داعي لإظهار الكبسولة بالكامل
+  if (!showHome && !showPower) return null;
+
   const handleExitApp = async () => {
-    if (Capacitor.isNativePlatform()) {
-      await CapApp.exitApp(); // خروج من الجوال
+    if (isNative) {
+      await CapApp.exitApp(); 
     } else {
-      window.close(); // إغلاق نافذة الويندوز / المتصفح
+      window.close(); 
     }
   };
 
   return (
     <div 
-      className="fixed left-4 md:left-6 z-[99999] flex flex-col gap-3"
-      style={{ top: 'max(1.2rem, calc(env(safe-area-inset-top) - 0.2rem))' }}
+      className="fixed z-[99999] flex items-center p-1 md:p-1.5 rounded-full backdrop-blur-xl border transition-all duration-500 hover:shadow-lg"
+      style={{ 
+        top: 'max(1.5rem, env(safe-area-inset-top))',
+        left: 'max(1.5rem, env(safe-area-inset-left))',
+        backgroundColor: 'rgba(15, 23, 42, 0.65)', // زجاج داكن فاخر (يبرز بجمال على الفاتح والداكن)
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255,255,255,0.1)'
+      }}
     >
-      {/* زر العودة للرئيسية (يختفي إذا كنا في الرئيسية أصلاً) */}
-      {!isHome && (
+      {/* 🏠 زر العودة للرئيسية */}
+      {showHome && (
         <button
           onClick={() => window.location.hash = '#/'}
-          className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-white/20 dark:bg-black/40 backdrop-blur-xl border border-white/30 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all duration-300"
+          className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full bg-transparent hover:bg-white/15 active:scale-90 transition-all duration-300 text-slate-300 hover:text-white group"
           title="العودة للرئيسية"
         >
-          <Home className="text-gray-800 dark:text-white w-5 h-5 md:w-6 md:h-6" />
+          <Home className="w-4 h-4 md:w-5 md:h-5 transition-transform group-hover:scale-110" />
         </button>
       )}
 
-      {/* زر إغلاق النظام (يظهر دائماً باللون الأحمر الفاخر) */}
-      <button
-        onClick={handleExitApp}
-        className="flex items-center justify-center w-10 h-10 md:w-12 md:h-12 bg-rose-500/20 backdrop-blur-xl border border-rose-500/30 rounded-full shadow-lg hover:scale-110 hover:bg-rose-500/40 active:scale-95 transition-all duration-300 group"
-        title="إغلاق المنظومة"
-      >
-        <Power className="text-rose-600 dark:text-rose-400 w-5 h-5 md:w-6 md:h-6 group-hover:text-rose-500" />
-      </button>
+      {/* ➖ فاصل أنيق (يظهر فقط إذا كان كلا الزرين ظاهرين) */}
+      {showHome && showPower && (
+        <div className="w-[1px] h-5 md:h-6 bg-white/10 mx-1 rounded-full"></div>
+      )}
+
+      {/* ⏻ زر إغلاق النظام */}
+      {showPower && (
+        <button
+          onClick={handleExitApp}
+          className="flex items-center justify-center w-8 h-8 md:w-10 md:h-10 rounded-full bg-transparent hover:bg-rose-500/20 active:scale-90 transition-all duration-300 text-rose-400 hover:text-rose-400 group"
+          title="إغلاق المنظومة"
+        >
+          <Power className="w-4 h-4 md:w-5 md:h-5 transition-transform group-hover:scale-110" />
+        </button>
+      )}
     </div>
   );
 }
