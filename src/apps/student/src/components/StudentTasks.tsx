@@ -27,7 +27,8 @@ const GlassLayout: React.FC<{
 }> = ({ title, subtitle, icon, rightAction, children }) => {
   const { dir } = useApp();
   return (
-    <div className="flex flex-col h-full bg-transparent text-white relative overflow-hidden" dir={dir}>
+    // 💉 الجراحة الأولى: تقييد الحاوية بالشاشة باستخدام "absolute inset-0" لإجبار التمرير على العمل
+    <div className="flex flex-col absolute inset-0 bg-transparent text-white overflow-hidden" dir={dir}>
       <header className="sticky top-0 z-40 bg-[#0f172a]/60 backdrop-blur-2xl border-b border-white/10 pt-[max(env(safe-area-inset-top),16px)] pb-4 px-5 shrink-0 shadow-sm transition-all flex justify-between items-center">
         <div className="flex items-center gap-3">
           {icon && (
@@ -42,7 +43,8 @@ const GlassLayout: React.FC<{
         </div>
         {rightAction && <div className="shrink-0 pl-1">{rightAction}</div>}
       </header>
-      <main className="flex-1 overflow-y-auto custom-scrollbar px-5 pt-5 pb-[100px]">
+      {/* 💉 الجراحة الثانية: إضافة خصائص اللمس (touch-pan-y) لسلاسة السحب في الجوال */}
+      <main className="flex-1 overflow-y-auto overscroll-y-contain touch-pan-y custom-scrollbar px-5 pt-5 pb-[120px]">
         {children}
       </main>
     </div>
@@ -50,7 +52,7 @@ const GlassLayout: React.FC<{
 };
 
 // =========================================================================
-// 🚀 2. تطبيق المهام الرئيسي (نفس المنطق 100%)
+// 🚀 2. تطبيق المهام الرئيسي
 // =========================================================================
 const StudentTasks: React.FC = () => {
   const { t, dir, studentData, loading, refreshData } = useApp();
@@ -94,7 +96,8 @@ const StudentTasks: React.FC = () => {
             completedAt: completedAt
           };
         })
-        .filter(Boolean) as Task[];
+        .filter(Boolean)
+        .reverse() as Task[]; // 💉 الجراحة الثالثة: عكس المصفوفة (reverse) لكي تظهر المهام الجديدة (الأخيرة) في القمة دائماً
 
       // حفظ القائمة الجديدة للمهام المخفية في الهاتف
       localStorage.setItem(`hidden_tasks_${civilId}`, JSON.stringify(hiddenTasks));
@@ -189,7 +192,6 @@ const StudentTasks: React.FC = () => {
               </button>
               
               <div className="flex-1 min-w-0">
-                {/* 💉 تم تغيير truncate إلى break-words هنا */}
                 <h3 className="text-sm font-bold text-white mb-1 leading-snug break-words group-hover:text-indigo-100 transition-colors">{task.title}</h3>
                 <div className="flex items-center gap-2 text-[9px] font-bold text-indigo-200/70">
                   <span className="bg-indigo-500/20 px-2 py-0.5 rounded-md border border-white/5 truncate max-w-[100px]">{task.subject}</span>
@@ -225,7 +227,6 @@ const StudentTasks: React.FC = () => {
                   </button>
                   
                   <div className="flex-1 min-w-0">
-                    {/* 💉 تم تغيير truncate إلى break-words هنا أيضاً */}
                     <h3 className="text-xs font-bold text-indigo-200/60 line-through break-words">{task.title}</h3>
                   </div>
                   
