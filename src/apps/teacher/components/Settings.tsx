@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Save, AlertTriangle, FileJson, Trash2, 
   Download, RefreshCw, Loader2, Zap, Database, ArrowRight, Globe, Settings as SettingsIcon,
-  ChevronLeft, ChevronRight, UserCircle, Shield, UploadCloud, X, Key // 💉 تمت إضافة Key هنا
+  ChevronLeft, ChevronRight, UserCircle, Shield, UploadCloud, X, Key 
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
@@ -29,17 +29,27 @@ const Settings = () => {
   const [school, setSchool] = useState(teacherInfo?.school || '');
   const [civilId, setCivilId] = useState(teacherInfo?.civilId || ''); 
   
+  // 💉 حالات البوابة السرية (للمعلم الأول)
+  const [role, setRole] = useState(teacherInfo?.role || 'teacher');
+  const [departmentName, setDepartmentName] = useState(teacherInfo?.departmentName || '');
+  const [leadershipPasscode, setLeadershipPasscode] = useState('');
+  const [isLeadershipUnlocked, setIsLeadershipUnlocked] = useState(teacherInfo?.role === 'senior');
+
   const [loading, setLoading] = useState<'backup' | 'restore' | 'reset' | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isRamadan = theme === 'ramadan';
 
-  const [activeDrawer, setActiveDrawer] = useState<'language' | 'profile' | 'system' | null>(null);
+  // 💉 إضافة 'leadership' للقائمة المسموحة
+  const [activeDrawer, setActiveDrawer] = useState<'language' | 'profile' | 'system' | 'leadership' | null>(null);
 
   useEffect(() => {
       setName(teacherInfo?.name || '');
       setSchool(teacherInfo?.school || '');
       setCivilId(teacherInfo?.civilId || '');
+      setRole(teacherInfo?.role || 'teacher');
+      setDepartmentName(teacherInfo?.departmentName || '');
+      setIsLeadershipUnlocked(teacherInfo?.role === 'senior');
   }, [teacherInfo]);
 
   const handleBackup = async () => {
@@ -229,6 +239,23 @@ const Settings = () => {
             </div>
           </div>
 
+          {/* 🛡️ مجموعة إعدادات القيادة (المعلم الأول) */}
+          <div className="space-y-2">
+            <h3 className="px-2 text-[10px] font-black uppercase tracking-wider text-textSecondary">إدارة الصلاحيات</h3>
+            <div className="glass-card rounded-2xl overflow-hidden border border-borderColor transition-all">
+                <button 
+                    onClick={() => setActiveDrawer('leadership')}
+                    className="w-full p-4 flex items-center justify-between transition-colors hover:bg-bgSoft active:scale-[0.99]"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-lg bg-purple-500/10 text-purple-500"><Shield size={20} /></div>
+                        <span className="font-bold text-sm text-textPrimary">إعدادات المعلم الأول</span>
+                    </div>
+                    <ChevronIcon size={16} className="text-textSecondary" />
+                </button>
+            </div>
+          </div>
+
         </div>
       </div>
 
@@ -259,7 +286,7 @@ const Settings = () => {
         </div>
       </DrawerSheet>
 
-      {/* 👤 2. لوحة البيانات الشخصية (تم تعقيمها من الرقم المدني) */}
+      {/* 👤 2. لوحة البيانات الشخصية */}
       <DrawerSheet isOpen={activeDrawer === 'profile'} onClose={() => setActiveDrawer(null)} dir={dir} mode="side">
         <div className="flex flex-col h-full w-full">
             <div className="flex justify-between items-center px-6 pb-4 border-b border-borderColor shrink-0">
@@ -275,7 +302,6 @@ const Settings = () => {
                     <input value={school} onChange={e => setSchool(e.target.value)} className="w-full rounded-xl px-4 py-3.5 outline-none text-sm font-bold transition-all border bg-bgSoft border-borderColor text-textPrimary focus:border-primary placeholder:text-textSecondary/50" placeholder={t('schoolNamePlaceholder')} />
                 </div>
                 
-                {/* 💉 التمويه البصري: حقل كود المعلم السري بدلاً من الرقم المدني */}
                 <div className="space-y-1 mt-4">
                     <label className="text-xs font-bold px-1 flex items-center gap-1 text-amber-500">
                         <Key size={14}/> كود المعلم السري (للسحابة)
@@ -310,7 +336,6 @@ const Settings = () => {
             
             <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
                 
-                {/* خلايا خيارات النظام */}
                 <div className="glass-card rounded-2xl overflow-hidden border border-borderColor flex flex-col divide-y divide-borderColor/50">
                     
                     <button onClick={handleBackup} className="w-full p-4 flex items-center justify-between transition-colors hover:bg-bgSoft active:scale-[0.99]">
@@ -344,6 +369,96 @@ const Settings = () => {
             </div>
             
             <input type="file" ref={fileInputRef} className="hidden" accept=".json" onChange={handleRestore} />
+        </div>
+      </DrawerSheet>
+
+      {/* 🛡️ 4. البوابة السرية (إعدادات المعلم الأول) */}
+      <DrawerSheet isOpen={activeDrawer === 'leadership'} onClose={() => { setActiveDrawer(null); setLeadershipPasscode(''); }} dir={dir} mode="side">
+        <div className="flex flex-col h-full w-full">
+            <div className="flex justify-between items-center px-6 pb-4 border-b border-borderColor shrink-0">
+                <h3 className="font-black text-xl text-textPrimary flex items-center gap-2">
+                    <Shield className="text-purple-500" /> إعدادات القيادة
+                </h3>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 custom-scrollbar">
+                {!isLeadershipUnlocked ? (
+                    <div className="space-y-4 text-center mt-10">
+                        <div className="w-16 h-16 mx-auto bg-purple-500/10 text-purple-500 rounded-full flex items-center justify-center">
+                            <Key size={32} />
+                        </div>
+                        <h4 className="font-bold text-textPrimary">بوابة المعلم الأول</h4>
+                        <p className="text-xs text-textSecondary">الرجاء إدخال الرمز السري لتفعيل الصلاحيات الإشرافية</p>
+                        <div className="pt-4">
+                          <input
+                              type="password"
+                              value={leadershipPasscode}
+                              onChange={(e) => {
+                                  setLeadershipPasscode(e.target.value);
+                                  // 🔑 الرمز السري هنا هو 5555
+                                  if (e.target.value === '5555') { 
+                                      setIsLeadershipUnlocked(true);
+                                  }
+                              }}
+                              className="w-full max-w-xs mx-auto text-center rounded-xl px-4 py-4 outline-none font-black tracking-[1em] transition-all border bg-bgSoft border-borderColor focus:border-purple-500 text-xl"
+                              placeholder="****"
+                              maxLength={4}
+                              dir="ltr"
+                          />
+                        </div>
+                    </div>
+                ) : (
+                    <div className="space-y-6 animate-in fade-in duration-300">
+                        <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-600 flex gap-3">
+                            <Shield className="w-6 h-6 shrink-0" />
+                            <p className="text-xs font-bold leading-relaxed">
+                                أنت الآن في وضع القيادة. يمكنك تفعيل صلاحيات "المعلم الأول" لإدارة حصص الاحتياط ومتابعة إحصائيات المعلمين في قسمك.
+                            </p>
+                        </div>
+
+                        <div className="space-y-4">
+                            <label className="flex items-center justify-between p-4 rounded-xl border border-borderColor bg-bgSoft cursor-pointer transition-colors hover:bg-bgCard">
+                                <span className="font-bold text-sm text-textPrimary">تفعيل صلاحيات المعلم الأول</span>
+                                <input
+                                    type="checkbox"
+                                    checked={role === 'senior'}
+                                    onChange={(e) => setRole(e.target.checked ? 'senior' : 'teacher')}
+                                    className="w-5 h-5 accent-purple-500 cursor-pointer"
+                                />
+                            </label>
+
+                            {role === 'senior' && (
+                                <div className="space-y-2 animate-in slide-in-from-top-2 pt-2">
+                                    <label className="text-xs font-bold px-1 text-textSecondary">القسم التابع لك (الذي تشرف عليه)</label>
+                                    <input
+                                        value={departmentName}
+                                        onChange={e => setDepartmentName(e.target.value)}
+                                        className="w-full rounded-xl px-4 py-3.5 outline-none text-sm font-bold transition-all border bg-bgSoft border-borderColor text-textPrimary focus:border-purple-500 placeholder:text-textSecondary/50"
+                                        placeholder="مثال: قسم الرياضيات"
+                                    />
+                                    <p className="text-[10px] text-textSecondary px-1">
+                                      هذا سيسمح للتطبيق بجلب المعلمين التابعين لنفس المادة لتوزيع الاحتياط عليهم.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {isLeadershipUnlocked && (
+                <div className="p-4 border-t border-borderColor bg-bgCard shrink-0">
+                    <button
+                        onClick={() => {
+                            setTeacherInfo({ ...teacherInfo, role, departmentName });
+                            setActiveDrawer(null);
+                        }}
+                        className="w-full py-4 rounded-xl font-black text-sm transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 bg-purple-500 hover:bg-purple-600 text-white"
+                    >
+                        <Save size={18} /> حفظ الصلاحيات
+                    </button>
+                </div>
+            )}
         </div>
       </DrawerSheet>
 
