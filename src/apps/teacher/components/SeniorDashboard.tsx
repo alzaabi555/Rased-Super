@@ -200,12 +200,12 @@ const SeniorDashboard: React.FC = () => {
             <label className="text-[10px] font-black text-textSecondary mb-3 block uppercase">1. اختر المعلم الغائب</label>
             <div className="relative">
               <select 
-                value={absentTeacher} onChange={(e) => fetchTeacherSchedule(e.target.value)}
-                className="w-full bg-bgSoft border border-borderColor rounded-xl px-4 py-4 text-sm font-black text-textPrimary appearance-none outline-none focus:border-purple-500"
-              >
-                <option value="">-- اضغط للاختيار من فريقك --</option>
-                {mySquad.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+  value={absentTeacher} onChange={(e) => fetchTeacherSchedule(e.target.value)}
+  className="w-full bg-white border border-borderColor rounded-xl px-4 py-4 text-sm font-black text-slate-900 appearance-none outline-none focus:border-purple-500 shadow-sm"
+>
+  <option value="" className="text-slate-500 font-bold">-- اضغط للاختيار من فريقك --</option>
+  {mySquad.map(t => <option key={t} value={t} className="text-slate-900 font-bold bg-white">{t}</option>)}
+</select>
               <ChevronDown className="absolute left-4 top-4.5 text-textSecondary pointer-events-none" size={18} />
             </div>
           </div>
@@ -228,12 +228,12 @@ const SeniorDashboard: React.FC = () => {
                   </div>
                   <div className="relative">
                     <select 
-                      onChange={(e) => setSubstitutions({...substitutions, [item.period]: e.target.value})}
-                      className="w-full bg-white border border-borderColor rounded-xl px-4 py-3 text-xs font-black text-textPrimary appearance-none outline-none focus:border-emerald-500"
-                    >
-                      <option value="">اختر المعلم البديل...</option>
-                      {mySquad.filter(t => t !== absentTeacher).map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
+  onChange={(e) => setSubstitutions({...substitutions, [item.period]: e.target.value})}
+  className="w-full bg-white border border-borderColor rounded-xl px-4 py-3 text-xs font-black text-slate-900 appearance-none outline-none focus:border-emerald-500 shadow-sm"
+>
+  <option value="" className="text-slate-500">اختر المعلم البديل...</option>
+  {mySquad.filter(t => t !== absentTeacher).map(t => <option key={t} value={t} className="text-slate-900 font-bold bg-white">{t}</option>)}
+</select>
                     <ChevronDown className="absolute left-3 top-3.5 text-emerald-500 pointer-events-none" size={16} />
                   </div>
                 </div>
