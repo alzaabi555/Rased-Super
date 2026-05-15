@@ -17,30 +17,53 @@ const SeniorDashboard: React.FC = () => {
     { id: 2, absent: 'أ. محمود (رياضيات)', sub: 'أ. ياسر', class: '6/2', period: 'الحصة 1', status: 'Executed', time: '07:15 ص' },
   ]);
 
-  const handleAssign = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!absentTeacher || !targetClass || !subTeacher) {
-      alert('الرجاء إكمال جميع بيانات التكليف');
-      return;
+  // 💉 تحديث دالة الإرسال لترتبط بالسحابة فوراً
+const handleAssign = async (e: React.FormEvent) => {
+  e.preventDefault();
+  if (!absentTeacher || !targetClass || !subTeacher) {
+    alert('الرجاء إكمال جميع بيانات التكليف');
+    return;
+  }
+
+  const ADMIN_SCRIPT_URL = "ضع_هنا_رابط_سحابة_الإدارة_الجديد"; // 👈 ضع الرابط الذي استخرجته بعد عمل New Deployment
+
+  const newAssignment = {
+    action: "createSubstitution", // المجلد المستهدف في السيرفر
+    id: Date.now().toString(),
+    date: new Date().toISOString().split('T')[0],
+    time: new Date().toLocaleTimeString('ar-OM', { hour: '2-digit', minute: '2-digit' }),
+    department: teacherInfo.departmentName || "عام",
+    absentTeacher: absentTeacher,
+    period: `الحصة ${period}`,
+    targetClass: targetClass,
+    subTeacher: subTeacher,
+  };
+
+  try {
+    const response = await fetch(ADMIN_SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(newAssignment),
+    });
+    const result = await response.json();
+
+    if (result.status === "success") {
+      // تحديث القائمة المحلية فوراً ليشعر المعلم بالسرعة
+      setAssignments([{ ...newAssignment, status: 'Assigned' }, ...assignments]);
+      
+      // تفريغ الحقول
+      setAbsentTeacher('');
+      setTargetClass('');
+      setSubTeacher('');
+      setPeriod('1');
+      
+      alert('✅ تم إرسال التكليف للسحابة ووصل للإدارة فوراً!');
+    } else {
+      alert('❌ فشل الإرسال: ' + result.message);
     }
-
-    const newAssignment = {
-      id: Date.now(),
-      absent: absentTeacher,
-      sub: subTeacher,
-      class: targetClass,
-      period: `الحصة ${period}`,
-      status: 'Assigned',
-      time: new Date().toLocaleTimeString('ar-OM', { hour: '2-digit', minute: '2-digit' })
-    };
-
-    setAssignments([newAssignment, ...assignments]);
-    
-    // تفريغ الحقول بعد الإرسال
-    setAbsentTeacher('');
-    setTargetClass('');
-    setSubTeacher('');
-    setPeriod('1');
+  } catch (error) {
+    alert('❌ خطأ في الاتصال بالسحابة: تأكد من الإنترنت ورابط السكربت');
+  }
+};
     
     alert('تم إصدار التكليف بنجاح! (الربط السحابي قادم في الخطوة التالية)');
   };
