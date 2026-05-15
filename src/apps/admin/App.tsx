@@ -191,12 +191,11 @@ function AdminDashboardCore() {
 }
 
 // =========================================================
-// 🛡️ شاشة رادار الاحتياط (المصفوفة الإدارية) - جديدة كلياً
+// 🛡️ شاشة رادار الاحتياط (المصفوفة الإدارية)
 // =========================================================
 function SubstitutionsRadar({ schoolCode, schoolName }: { schoolCode: string, schoolName: string }) {
   const [data, setData] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const todayStr = new Date().toLocaleDateString('en-CA');
 
   const fetchSubstitutions = async () => {
     setIsLoading(true);
@@ -210,9 +209,16 @@ function SubstitutionsRadar({ schoolCode, schoolName }: { schoolCode: string, sc
 
   useEffect(() => { fetchSubstitutions(); }, []);
 
-  // بناء المصفوفة البانورامية (تجميع حسب المعلم الغائب)
+  // 🟢 الجراحة الأولى: بناء المصفوفة مع تجاهل فروقات التوقيت (Timezone Mismatch Fix)
   const matrixData = useMemo(() => {
-    const todayData = data.filter(d => d.date === todayStr);
+    const todayCA = new Date().toLocaleDateString('en-CA'); // يخرج بصيغة: YYYY-MM-DD
+    
+    const todayData = data.filter(d => {
+      if (!d.date) return false;
+      const itemDate = d.date.toString().split('T')[0];
+      return itemDate === todayCA;
+    });
+
     const grouped: any = {};
     
     todayData.forEach(item => {
@@ -228,7 +234,7 @@ function SubstitutionsRadar({ schoolCode, schoolName }: { schoolCode: string, sc
       department: grouped[absentName].department,
       periods: grouped[absentName].periods
     }));
-  }, [data, todayStr]);
+  }, [data]);
 
   const printMatrixReport = () => {
     const printWindow = window.open('', '_blank');
@@ -377,7 +383,28 @@ function DashboardHome({ data, schoolName }: { data: any, schoolName: string }) 
   const todayDate = new Date();
   const todayArabicName = getArabicDayName(todayDate);
 
-  const expectedTeachersToday = useMemo(() => data.teachers.filter((t: any) => t.day === todayArabicName), [data.teachers, todayArabicName]);
+  // 🟢 الجراحة الثانية: فلترة المعلمين المستهدفين ليقتصر على "معلمي الحصة الأولى" فقط
+  const expectedTeachersToday = useMemo(() => {
+    // 1. جلب كل حصص هذا اليوم
+    const todayClasses = data.teachers.filter((t: any) => t.day === todayArabicName);
+    
+    // 2. تصفية "الحصة الأولى" فقط لمعرفة من يجب عليه الرصد صباحاً
+    const firstPeriodClasses = todayClasses.filter((t: any) => {
+      const p = String(t.period).trim();
+      return p === '1' || p.includes('الأولى') || p === '01';
+    });
+
+    // 3. إزالة التكرار (لتجنب ظهور اسم المعلم مرتين إذا كان يدرس فصلين مدمجين)
+    const uniqueTeachersMap = new Map();
+    firstPeriodClasses.forEach((t: any) => {
+      if (!uniqueTeachersMap.has(t.name)) {
+        uniqueTeachersMap.set(t.name, t);
+      }
+    });
+    
+    return Array.from(uniqueTeachersMap.values());
+  }, [data.teachers, todayArabicName]);
+
   const todayLogs = useMemo(() => data.logs.filter((log: any) => isSameDate(log.time, todayDate)), [data.logs, todayDate]);
 
   const uniqueTodayLogs = useMemo(() => {
@@ -749,7 +776,6 @@ function SearchPage({ data }: { data: any }) {
   );
 }
 
-// 💉 تم تعديل دالة الإكسل لتقرأ عمود "الحصة" أو "رقم الحصة" وتدرجه ضمن المرفوعات
 function SettingsPage({ schoolCode, schoolName, setSchoolName }: any) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{ type: 'idle' | 'success' | 'error', msg: string }>({ type: 'idle', msg: '' });
@@ -769,8 +795,8 @@ function SettingsPage({ schoolCode, schoolName, setSchoolName }: any) {
         name: row['اسم المعلم'] || row['الاسم'] || row['المعلم'] || '',
         className: row['الفصل'] || row['الفصل المسند'] || row['الصفوف'] || '',
         day: row['اليوم'] || '',
-        period: row['الحصة'] || row['رقم الحصة'] || '' // 💉 استخراج الحصة
-      })).filter(t => t.name && t.day && t.period); // 💉 تأكيد وجود الحصة قبل الرفع
+        period: row['الحصة'] || row['رقم الحصة'] || '' 
+      })).filter(t => t.name && t.day && t.period); 
       
       if (teachersList.length === 0) throw new Error("تأكد من وجود الأعمدة: (اسم المعلم، الفصل، اليوم، الحصة).");
       
@@ -852,7 +878,7 @@ function StatCard({ title, value, subtitle, icon: Icon, color }: any) {
 function Sidebar({ activeSection, setActiveSection }: any) {
   const navItems = [
     { id: 'dashboard', label: 'اللوحة الرئيسية', icon: LayoutDashboard },
-    { id: 'substitutions', label: 'رادار الاحتياط', icon: ShieldCheck }, // 💉 القسم الجديد
+    { id: 'substitutions', label: 'رادار الاحتياط', icon: ShieldCheck },
     { id: 'reports', label: 'أرشيف التقارير', icon: FileText },
     { id: 'search', label: 'بحث الطلاب', icon: Search },
     { id: 'settings', label: 'الإعدادات', icon: Settings },
