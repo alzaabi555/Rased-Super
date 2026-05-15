@@ -33,6 +33,8 @@ import WelcomeScreen from './components/WelcomeScreen';
 import StudentGroups from './components/StudentGroups';
 import TeacherLibrary from './components/TeacherLibrary';
 import GlobalSyncManager from './components/GlobalSyncManager'; 
+// 💉 تم استدعاء شاشة مركز القيادة للمعلم الأول
+import SeniorDashboard from './components/SeniorDashboard'; 
 import { useSchoolBell } from './hooks/useSchoolBell';
 
 // 🌍 The New Global Layout Engine
@@ -209,17 +211,20 @@ const AppContent: React.FC = () => {
     setShowWelcome(false);
   };
 
-  // Navigation config passed to AppLayout
+  // 💉 إضافة زر "إدارة القسم" في القائمة السفلية (يظهر فقط للمعلم الأول)
   const mobileNavItems = [
     { id: 'dashboard', label: t('navDashboard') || (dir === 'rtl' ? 'الرئيسية' : 'Dashboard'), IconComponent: LayoutDashboard },
+    ...(teacherInfo?.role === 'senior' ? [{ id: 'senior_dashboard', label: dir === 'rtl' ? 'القيادة' : 'Leader', IconComponent: ShieldCheck }] : []),
     { id: 'attendance', label: t('navAttendance') || (dir === 'rtl' ? 'الغياب' : 'Attendance'), IconComponent: CalendarCheck },
     { id: 'students', label: t('navStudents') || (dir === 'rtl' ? 'الطلاب' : 'Students'), IconComponent: Users },
     { id: 'grades', label: t('navGrades') || (dir === 'rtl' ? 'الدرجات' : 'Grades'), IconComponent: BarChart3 },
     { id: 'tasks', label: t('navTasks') || t('tasks') || (dir === 'rtl' ? 'المهام' : 'Tasks'), IconComponent: CheckSquare },
   ];
   
+  // 💉 إضافة زر "إدارة القسم" في القائمة الجانبية (يظهر فقط للمعلم الأول)
   const desktopNavItems = [
     { id: 'dashboard', label: t('navDashboard') || (dir === 'rtl' ? 'الرئيسية' : 'Dashboard'), icon: LayoutDashboard },
+    ...(teacherInfo?.role === 'senior' ? [{ id: 'senior_dashboard', label: dir === 'rtl' ? 'إدارة القسم' : 'Dept. Admin', icon: ShieldCheck }] : []),
     { id: 'attendance', label: t('navAttendance') || (dir === 'rtl' ? 'الغياب' : 'Attendance'), icon: CalendarCheck },
     { id: 'students', label: t('navStudents') || (dir === 'rtl' ? 'الطلاب' : 'Students'), icon: Users },
     { id: 'groups', label: t('navGroups') || (dir === 'rtl' ? 'المجموعات' : 'Groups'), icon: Users },
@@ -264,6 +269,8 @@ const AppContent: React.FC = () => {
           notificationsEnabled={notificationsEnabled} onToggleNotifications={handleToggleNotifications}
           currentSemester={currentSemester} onSemesterChange={setCurrentSemester}
         />;
+      // 💉 المسار الجديد: شاشة مركز القيادة للمعلم الأول
+      case 'senior_dashboard': return <SeniorDashboard />;
       case 'tasks': return <TeacherTasks students={students} teacherSubject={teacherInfo?.subject || 'عام'} />;
       case 'library': return <TeacherLibrary />;
       case 'attendance': return <AttendanceTracker students={students} classes={classes} setStudents={setStudents} />;
