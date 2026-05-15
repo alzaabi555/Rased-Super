@@ -3,7 +3,7 @@ import {
   School, LogOut, Users, CheckCircle2, Clock,
   TrendingUp, AlertTriangle, LayoutDashboard, FileText,
   Search, Settings, Calendar as CalendarIcon,
-  ListOrdered, Loader2, UploadCloud, Printer 
+  ListOrdered, Loader2, UploadCloud, Printer, ShieldCheck, RefreshCw 
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
@@ -13,7 +13,7 @@ import { AdminProvider, useAdmin } from './context/AdminContext';
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZHhZ-RPWUpBGIlw0qTFPUmOPmq9WpcvW4WLklcjb_A9U3MW0luIXYPnHznI29ThpbMA/exec"; 
 
-type Section = 'dashboard' | 'reports' | 'search' | 'settings';
+type Section = 'dashboard' | 'substitutions' | 'reports' | 'search' | 'settings';
 
 const ARABIC_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const getArabicDayName = (date: Date) => ARABIC_DAYS[date.getDay()];
@@ -84,56 +84,26 @@ const generateOfficialReport = (title: string, dataList: any[], schoolName: stri
         th, td { border: 1px solid #000; padding: 10px 8px; text-align: center; }
         th { background-color: #f1f5f9; font-weight: 900; font-size: 13pt; }
         .signatures { display: flex; justify-content: space-between; margin-top: 70px; font-weight: 900; font-size: 14pt; padding: 0 20px; }
-        .watermark { position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); font-size: 130px; font-weight: 900; color: rgba(0,0,0,0.03); z-index: -1; white-space: nowrap; pointer-events: none;}
         .footer-note { text-align: center; font-size: 9pt; font-weight: bold; color: #64748b; margin-top: 50px; border-top: 1px solid #cbd5e1; padding-top: 10px; }
       </style>
     </head>
     <body>
        <div class="header">
-          <div class="right-header">
-            سلطنة عُمان<br>
-            وزارة التعليم<br>
-            المديرية العامة للتعليم بمحافظة شمال الباطنة<br>
-          </div>
-          <div class="left-header">
-            المدرسة: ${schoolName || '____________________'}<br>
-            التاريخ: ${dateStr}<br>
-            النظام: راصد الإدارة
-          </div>
+          <div class="right-header">سلطنة عُمان<br>وزارة التعليم<br>المديرية العامة للتعليم بمحافظة شمال الباطنة</div>
+          <div class="left-header">المدرسة: ${schoolName || '____________________'}<br>التاريخ: ${dateStr}<br>النظام: راصد الإدارة</div>
        </div>
-       
        <div class="title">${title}</div>
-       
-       <table>
-         <thead>
-           ${tableHeader}
-         </thead>
-         <tbody>
-           ${tableContent}
-         </tbody>
-       </table>
-
+       <table><thead>${tableHeader}</thead><tbody>${tableContent}</tbody></table>
        <div class="signatures">
          ${type === 'students' ? '<div>مُعد التقرير: ........................</div>' : '<div>الختم الرسمي:</div>'}
          <div>يعتمد، مدير المدرسة: ........................</div>
        </div>
-
-       <div class="footer-note">
-          تم استخراج هذا التقرير إلكترونياً من نظام راصد - برمجة وتطوير: ALZZABI MOHAMMAD
-       </div>
-
-       <script>
-         window.onload = function() {
-           setTimeout(function() { window.print(); }, 500);
-         };
-       </script>
+       <div class="footer-note">تم استخراج هذا التقرير إلكترونياً من نظام راصد - برمجة وتطوير: ALZZABI MOHAMMAD</div>
+       <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };</script>
     </body>
     </html>
   `;
-
-  printWindow.document.open();
-  printWindow.document.write(htmlContent);
-  printWindow.document.close();
+  printWindow.document.open(); printWindow.document.write(htmlContent); printWindow.document.close();
 };
 
 // =========================================================
@@ -151,7 +121,7 @@ export default function App() {
 // 3. قلب النظام الداخلي المتصل بالمخزن والسحابة
 // =========================================================
 function AdminDashboardCore() {
-  const { dashboardData, setDashboardData, isDataLoaded } = useAdmin(); // 💉 ربط المخزن
+  const { dashboardData, setDashboardData } = useAdmin();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [schoolCode, setSchoolCode] = useState(() => localStorage.getItem('rased_admin_code') || '');
   const [schoolName, setSchoolName] = useState(() => localStorage.getItem('rased_school_name') || '');
@@ -159,21 +129,17 @@ function AdminDashboardCore() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  useEffect(() => {
-    localStorage.setItem('rased_school_name', schoolName);
-  }, [schoolName]);
+  useEffect(() => { localStorage.setItem('rased_school_name', schoolName); }, [schoolName]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (schoolCode.length < 2) return;
-    setIsLoading(true);
-    setErrorMsg('');
+    setIsLoading(true); setErrorMsg('');
     try {
       const cacheBuster = new Date().getTime();
       const response = await fetch(`${SCRIPT_URL}?schoolCode=${schoolCode}&t=${cacheBuster}`);
       const result = await response.json();
       if (result.status === "success") {
-        // 💉 حفظ البيانات الجديدة في المخزن
         setDashboardData(result.data);
         setIsLoggedIn(true);
         localStorage.setItem('rased_admin_code', schoolCode);
@@ -181,8 +147,6 @@ function AdminDashboardCore() {
         setErrorMsg('حدث خطأ من السيرفر: ' + result.message);
       }
     } catch (error) {
-      console.error("تفاصيل الخطأ:", error); 
-      // 💉 درع الطوارئ: إذا فشل الاتصال بالسحابة ولديه بيانات مؤرشفة
       if (dashboardData.logs && dashboardData.logs.length > 0) {
         setIsLoggedIn(true);
         alert("⚠️ انتباه: تعذر الاتصال بالسحابة. أنت تتصفح الآن 'النسخة المؤرشفة' محلياً في جهازك.");
@@ -194,10 +158,7 @@ function AdminDashboardCore() {
     }
   };
 
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setActiveSection('dashboard');
-  };
+  const handleLogout = () => { setIsLoggedIn(false); setActiveSection('dashboard'); };
 
   if (!isLoggedIn) return <LoginScreen schoolCode={schoolCode} setSchoolCode={setSchoolCode} onLogin={handleLogin} isLoading={isLoading} errorMsg={errorMsg} />;
 
@@ -217,6 +178,7 @@ function AdminDashboardCore() {
           <AnimatePresence mode="wait">
             <motion.div key={activeSection} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }} className="max-w-7xl mx-auto h-full">
               {activeSection === 'dashboard' && <DashboardHome data={dashboardData} schoolName={schoolName} />}
+              {activeSection === 'substitutions' && <SubstitutionsRadar schoolCode={schoolCode} schoolName={schoolName} />}
               {activeSection === 'reports' && <ReportsPage data={dashboardData} schoolName={schoolName} />}
               {activeSection === 'search' && <SearchPage data={dashboardData} />}
               {activeSection === 'settings' && <SettingsPage schoolCode={schoolCode} schoolName={schoolName} setSchoolName={setSchoolName} />}
@@ -229,8 +191,187 @@ function AdminDashboardCore() {
 }
 
 // =========================================================
-// المكونات الفرعية (تم الحفاظ عليها بالكامل كما هي!)
+// 🛡️ شاشة رادار الاحتياط (المصفوفة الإدارية) - جديدة كلياً
 // =========================================================
+function SubstitutionsRadar({ schoolCode, schoolName }: { schoolCode: string, schoolName: string }) {
+  const [data, setData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const todayStr = new Date().toLocaleDateString('en-CA');
+
+  const fetchSubstitutions = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=getSubstitutions&role=admin&schoolCode=${schoolCode}`);
+      const result = await res.json();
+      if (result.status === "success") setData(result.data);
+    } catch (e) { alert("خطأ في الاتصال بالسحابة لاستدعاء الاحتياط."); }
+    finally { setIsLoading(false); }
+  };
+
+  useEffect(() => { fetchSubstitutions(); }, []);
+
+  // بناء المصفوفة البانورامية (تجميع حسب المعلم الغائب)
+  const matrixData = useMemo(() => {
+    const todayData = data.filter(d => d.date === todayStr);
+    const grouped: any = {};
+    
+    todayData.forEach(item => {
+      if (!grouped[item.absent]) {
+        grouped[item.absent] = { department: item.department, periods: {} };
+      }
+      const pNum = item.period.match(/\d+/) ? item.period.match(/\d+/)[0] : item.period;
+      grouped[item.absent].periods[pNum] = { sub: item.sub, class: item.class, status: item.status };
+    });
+    
+    return Object.keys(grouped).map(absentName => ({
+      absentName,
+      department: grouped[absentName].department,
+      periods: grouped[absentName].periods
+    }));
+  }, [data, todayStr]);
+
+  const printMatrixReport = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return alert('الرجاء السماح بالنوافذ المنبثقة.');
+    
+    let tableRows = '';
+    if(matrixData.length === 0) {
+      tableRows = `<tr><td colspan="9" style="text-align:center; padding: 20px;">لا توجد حصص احتياط مسجلة لهذا اليوم.</td></tr>`;
+    } else {
+      matrixData.forEach((row, idx) => {
+        let pCells = '';
+        for(let i=1; i<=8; i++) {
+          const p = row.periods[i];
+          if(p) {
+            pCells += `<td style="font-size: 10pt; font-weight: bold; background-color: ${p.status === 'Executed' ? '#ecfdf5' : '#fffbeb'}; border: 2px solid ${p.status === 'Executed' ? '#10b981' : '#f59e0b'};">
+                         ${p.sub}<br><span style="font-size:8pt; color:#666;">(${p.class})</span>
+                       </td>`;
+          } else {
+            pCells += `<td style="color:#cbd5e1;">-</td>`;
+          }
+        }
+        tableRows += `<tr>
+          <td style="font-weight:900; background-color:#f8fafc;">${idx+1}. ${row.absentName}<br><span style="font-size:8pt; font-weight:normal; color:#64748b;">${row.department}</span></td>
+          ${pCells}
+        </tr>`;
+      });
+    }
+
+    const html = `
+      <html dir="rtl" lang="ar">
+      <head>
+        <title>سجل الاحتياط اليومي</title>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@500;700;900&display=swap');
+          @page { size: A4 landscape; margin: 10mm; }
+          body { font-family: 'Tajawal', sans-serif; color: #000; -webkit-print-color-adjust: exact; }
+          h2 { text-align: center; text-decoration: underline; margin-bottom: 20px;}
+          table { width: 100%; border-collapse: collapse; text-align: center; }
+          th, td { border: 1px solid #000; padding: 8px; }
+          th { background-color: #cbd5e1; font-weight: 900; }
+          .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; font-weight:bold;}
+        </style>
+      </head>
+      <body>
+         <div class="header">
+            <div>المدرسة: ${schoolName}</div>
+            <div>التاريخ: ${new Date().toLocaleDateString('ar-OM')}</div>
+         </div>
+         <h2>سجل توزيع حصص الاحتياط اليومي (مصفوفة الإدارة)</h2>
+         <table>
+            <thead>
+               <tr><th style="width:20%">المعلم الغائب</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th></tr>
+            </thead>
+            <tbody>${tableRows}</tbody>
+         </table>
+         <div style="margin-top:40px; display:flex; justify-content:space-between; font-weight:bold;">
+            <div>إعداد المناوب الإداري: ....................</div>
+            <div>يعتمد، مدير المدرسة: ....................</div>
+         </div>
+         <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };</script>
+      </body>
+      </html>
+    `;
+    printWindow.document.open(); printWindow.document.write(html); printWindow.document.close();
+  };
+
+  return (
+    <div className="space-y-6 pb-10 h-full flex flex-col">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
+        <div className="flex items-center gap-3">
+          <ShieldCheck className="text-emerald-600" size={32} />
+          <div>
+            <h2 className="text-2xl font-black text-slate-800">رادار الاحتياط الشامل</h2>
+            <p className="text-sm font-bold text-slate-500">متابعة حية لتكليفات المعلمين الأوائل وتنفيذها</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button onClick={fetchSubstitutions} className="p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm">
+            <RefreshCw className={`text-slate-600 ${isLoading ? 'animate-spin' : ''}`} size={20} />
+          </button>
+          <button onClick={printMatrixReport} className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-3 rounded-xl font-black hover:bg-emerald-700 transition shadow-lg active:scale-95">
+            <Printer size={20} /> طباعة مصفوفة الاحتياط
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white/70 backdrop-blur-2xl rounded-[2rem] border border-white shadow-lg flex-1 overflow-hidden flex flex-col">
+        <div className="overflow-x-auto flex-1 custom-scrollbar p-6">
+          {matrixData.length === 0 ? (
+             <div className="flex flex-col items-center justify-center h-full text-slate-400 opacity-60">
+               <ShieldCheck size={64} className="mb-4" />
+               <p className="text-xl font-bold">لا توجد حصص احتياط مسجلة لهذا اليوم</p>
+             </div>
+          ) : (
+            <table className="w-full text-center border-collapse min-w-[900px]">
+              <thead className="bg-slate-100/80 border-b-2 border-slate-300 sticky top-0 z-10">
+                <tr>
+                  <th className="p-4 font-black text-slate-700 text-right rounded-tr-xl border-l border-slate-200">المعلم الغائب / القسم</th>
+                  {[1,2,3,4,5,6,7,8].map(n => <th key={n} className="p-4 font-black text-slate-700 border-l border-slate-200 w-24">الحصة {n}</th>)}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {matrixData.map((row, idx) => (
+                  <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="p-4 text-right border-l border-slate-100">
+                      <p className="font-black text-slate-800 text-sm">{row.absentName}</p>
+                      <p className="font-bold text-slate-500 text-[10px]">{row.department}</p>
+                    </td>
+                    {[1,2,3,4,5,6,7,8].map(n => {
+                      const p = row.periods[n];
+                      return (
+                        <td key={n} className="p-2 border-l border-slate-100 align-middle">
+                          {p ? (
+                            <div className={`flex flex-col items-center justify-center p-2 rounded-xl border-2 transition-all ${p.status === 'Executed' ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-[0_0_10px_rgba(16,185,129,0.2)]' : 'bg-amber-50 border-amber-400 text-amber-800 border-dashed'}`}>
+                               <span className="font-black text-[11px] leading-tight">{p.sub}</span>
+                               <span className="font-bold text-[9px] opacity-70">صف {p.class}</span>
+                               {p.status === 'Executed' ? <CheckCircle2 size={12} className="text-emerald-500 mt-1" /> : <Clock size={12} className="text-amber-500 mt-1" />}
+                            </div>
+                          ) : (
+                            <span className="text-slate-300">-</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+        <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-6 text-xs font-bold text-slate-600">
+           <div className="flex items-center gap-2"><div className="w-3 h-3 bg-emerald-50 border-2 border-emerald-500 rounded-full"></div> تم الدخول للفصل (منفذ)</div>
+           <div className="flex items-center gap-2"><div className="w-3 h-3 bg-amber-50 border-2 border-amber-400 border-dashed rounded-full"></div> بانتظار المعلم</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// =========================================================
+// المكونات الفرعية (القائمة، الإعدادات، البحث)
+// =========================================================
+
 function DashboardHome({ data, schoolName }: { data: any, schoolName: string }) {
   const [activeTab, setActiveTab] = useState<'absent' | 'late' | 'truant'>('absent');
   const todayDate = new Date();
@@ -328,7 +469,6 @@ function DashboardHome({ data, schoolName }: { data: any, schoolName: string }) 
               <AlertTriangle className="text-rose-500" size={24} />
               <h2 className="text-xl font-black text-slate-800">تأخر رصد اليوم</h2>
             </div>
-            
             {lateTeachers.length > 0 && (
               <button 
                 onClick={handlePrintLateTeachers}
@@ -609,6 +749,7 @@ function SearchPage({ data }: { data: any }) {
   );
 }
 
+// 💉 تم تعديل دالة الإكسل لتقرأ عمود "الحصة" أو "رقم الحصة" وتدرجه ضمن المرفوعات
 function SettingsPage({ schoolCode, schoolName, setSchoolName }: any) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<{ type: 'idle' | 'success' | 'error', msg: string }>({ type: 'idle', msg: '' });
@@ -623,17 +764,24 @@ function SettingsPage({ schoolCode, schoolName, setSchoolName }: any) {
       const workbook = XLSX.read(data);
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const jsonData: any[] = XLSX.utils.sheet_to_json(worksheet);
+      
       const teachersList = jsonData.map(row => ({
         name: row['اسم المعلم'] || row['الاسم'] || row['المعلم'] || '',
         className: row['الفصل'] || row['الفصل المسند'] || row['الصفوف'] || '',
-        day: row['اليوم'] || ''
-      })).filter(t => t.name && t.day); 
-      if (teachersList.length === 0) throw new Error("لم يتم العثور على بيانات صحيحة.");
-      setUploadStatus({ type: 'idle', msg: `تم استخراج ${teachersList.length} معلم، جاري الإرسال للسحابة...` });
+        day: row['اليوم'] || '',
+        period: row['الحصة'] || row['رقم الحصة'] || '' // 💉 استخراج الحصة
+      })).filter(t => t.name && t.day && t.period); // 💉 تأكيد وجود الحصة قبل الرفع
+      
+      if (teachersList.length === 0) throw new Error("تأكد من وجود الأعمدة: (اسم المعلم، الفصل، اليوم، الحصة).");
+      
+      setUploadStatus({ type: 'idle', msg: `تم استخراج ${teachersList.length} حصة، جاري الإرسال للسحابة...` });
+      
       const response = await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "bulk_upload_teachers", schoolCode: schoolCode, teachers: teachersList }) });
       const result = await response.json();
+      
       if (result.status === "success") setUploadStatus({ type: 'success', msg: result.message });
       else throw new Error(result.message);
+      
     } catch (error: any) {
       setUploadStatus({ type: 'error', msg: error.message || "حدث خطأ أثناء رفع الملف." });
     } finally {
@@ -665,8 +813,8 @@ function SettingsPage({ schoolCode, schoolName, setSchoolName }: any) {
         <div className="bg-white/60 backdrop-blur-2xl rounded-[2rem] p-6 sm:p-8 border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)]">
           <h3 className="text-xl font-bold text-slate-800 mb-4 flex items-center gap-2"><Users className="text-blue-500" size={24} /> إدارة المعلمين المرجعية</h3>
           <p className="text-slate-500 font-bold text-sm mb-6 leading-relaxed">
-            قم برفع ملف Excel (.xlsx) يحتوي على 3 أعمدة رئيسية: <br/>
-            <span className="text-indigo-600 bg-indigo-50 px-2 py-1 rounded mx-1">اسم المعلم</span><span className="text-indigo-600 bg-indigo-50 px-2 py-1 rounded mx-1">الفصل</span><span className="text-indigo-600 bg-indigo-50 px-2 py-1 rounded mx-1">اليوم</span>
+            قم برفع ملف Excel (.xlsx) يحتوي على 4 أعمدة رئيسية: <br/>
+            <span className="text-indigo-600 bg-indigo-50 px-2 py-1 rounded mx-1">اسم المعلم</span><span className="text-indigo-600 bg-indigo-50 px-2 py-1 rounded mx-1">الفصل</span><span className="text-indigo-600 bg-indigo-50 px-2 py-1 rounded mx-1">اليوم</span><span className="text-emerald-600 bg-emerald-50 px-2 py-1 rounded mx-1">الحصة</span>
           </p>
           <div className="relative border-2 border-dashed border-indigo-200 rounded-2xl p-8 flex flex-col items-center justify-center text-center bg-indigo-50/30 hover:bg-indigo-50/80 transition-colors group">
             {isUploading ? (
@@ -704,6 +852,7 @@ function StatCard({ title, value, subtitle, icon: Icon, color }: any) {
 function Sidebar({ activeSection, setActiveSection }: any) {
   const navItems = [
     { id: 'dashboard', label: 'اللوحة الرئيسية', icon: LayoutDashboard },
+    { id: 'substitutions', label: 'رادار الاحتياط', icon: ShieldCheck }, // 💉 القسم الجديد
     { id: 'reports', label: 'أرشيف التقارير', icon: FileText },
     { id: 'search', label: 'بحث الطلاب', icon: Search },
     { id: 'settings', label: 'الإعدادات', icon: Settings },
