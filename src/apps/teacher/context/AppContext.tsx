@@ -17,6 +17,9 @@ interface TeacherInfo {
   academicYear?: string;
   gender?: 'male' | 'female';
   civilId?: string; 
+  // 💉 الجينات الجديدة: تحديد دور المعلم والقسم الذي يشرف عليه
+  role?: 'teacher' | 'senior'; 
+  departmentName?: string;
 }
 
 interface AppContextType {
@@ -59,16 +62,15 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 const DBFILENAME = 'teacher_raseddatabasev2.json';
 
-// 💉 1. دالة تنظيف وتوحيد الأسماء العربية (لتجاهل الفروقات في الهمزات والمسافات بين المعلمين)
+// 💉 1. دالة تنظيف وتوحيد الأسماء العربية
 const normalizeArabicName = (name: string) => {
   if (!name) return '';
   return name.replace(/[أإآءؤئ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/عبد /g, 'عبد').replace(/\s+/g, '').trim();
 };
 
-// 💉 2. التشفير البصمي السري (يعتمد على الاسم والصف فقط - بدون رقم مدني نهائياً!)
+// 💉 2. التشفير البصمي السري
 const generateRasedId = (name: string, className: string) => {
   if (!name || !className) {
-     // في حالة نادرة لعدم وجود اسم أو صف، نولد كود عشوائي
      return `RSD-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
   }
 
@@ -124,9 +126,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ? `${now.getFullYear()} / ${now.getFullYear() + 1}` 
     : `${now.getFullYear() - 1} / ${now.getFullYear()}`;
 
+  // 💉 تهيئة الحقول الجديدة للقيادة
   const [teacherInfo, setTeacherInfo] = useState<TeacherInfo>({
     name: '', school: '', subject: '', governorate: '', avatar: '', stamp: '',
-    ministryLogo: '', academicYear: defaultAcademicYear, gender: 'male', civilId: ''
+    ministryLogo: '', academicYear: defaultAcademicYear, gender: 'male', civilId: '',
+    role: 'teacher', departmentName: ''
   });
 
   const [assessmentTools, setAssessmentTools] = useState<AssessmentTool[]>([]);
@@ -192,6 +196,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
                 academicYear: localStorage.getItem('teacher_academicYear') || defaultAcademicYear,
                 gender: localStorage.getItem('teacher_teacherGender') || 'male',
                 civilId: localStorage.getItem('teacher_civilId') || '',
+                // 💉 استرجاع الدور والقسم من الذاكرة
+                role: localStorage.getItem('teacher_role') || 'teacher',
+                departmentName: localStorage.getItem('teacher_departmentName') || '',
               },
               certificateSettings: JSON.parse(localStorage.getItem('teacher_certificateSettings') || 'null'),
               defaultStudentGender: localStorage.getItem('teacher_defaultStudentGender') || 'male',
@@ -200,13 +207,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
 
         if (data) {
-          // 💉 3. المهاجر السري: حقن أكواد RSD بناءً على (الاسم والصف) بدلاً من الهوية
+          // المهاجر السري: حقن أكواد RSD
           if (data.students && data.students.length > 0) {
-            
             const migratedStudents = data.students.map((student: any) => {
-              // مسح أي أثر للرقم المدني القديم لكي نكون متوافقين مع الوزارة 100%
               const { civilID, parentCode, ...cleanStudent } = student; 
-
               if (!cleanStudent.rasedId) {
                 const studentClass = cleanStudent.classes && cleanStudent.classes.length > 0 ? cleanStudent.classes[0] : 'عادي';
                 const newId = generateRasedId(cleanStudent.name, studentClass);
@@ -214,7 +218,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               }
               return cleanStudent;
             });
-
             setStudents(migratedStudents);
           } else {
             setStudents([]);
@@ -280,6 +283,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         localStorage.setItem('teacher_defaultStudentGender', defaultStudentGender);
         localStorage.setItem('teacher_civilId', teacherInfo.civilId || '');
         localStorage.setItem('teacher_appLanguage', language);
+        
+        // 💉 حفظ الجينات الجديدة للإدارة
+        localStorage.setItem('teacher_role', teacherInfo.role || 'teacher');
+        localStorage.setItem('teacher_departmentName', teacherInfo.departmentName || '');
 
         if (!isHeavy) {
             localStorage.setItem('teacher_studentData', JSON.stringify(students));
