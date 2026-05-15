@@ -8,15 +8,19 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import * as XLSX from 'xlsx';
 
-// 💉 1. استدعاء مخزن الإدارة
 import { AdminProvider, useAdmin } from './context/AdminContext';
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZHhZ-RPWUpBGIlw0qTFPUmOPmq9WpcvW4WLklcjb_A9U3MW0luIXYPnHznI29ThpbMA/exec"; 
 
 type Section = 'dashboard' | 'substitutions' | 'reports' | 'search' | 'settings';
 
-const ARABIC_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const ARABIC_DAYS = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const getArabicDayName = (date: Date) => ARABIC_DAYS[date.getDay()];
+
+const normalizeText = (text: string) => {
+  if (!text) return '';
+  return String(text).replace(/[أإآ]/g, 'ا').trim();
+};
 
 const isSameDate = (dateString: string, compareDate: Date) => {
   if (!dateString) return false;
@@ -35,12 +39,6 @@ const isSameDate = (dateString: string, compareDate: Date) => {
 };
 
 const generateOfficialReport = (title: string, dataList: any[], schoolName: string, dateStr: string, type: 'students' | 'teachers' = 'students') => {
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    alert('الرجاء السماح بالنوافذ المنبثقة (Pop-ups) لطباعة التقرير.');
-    return;
-  }
-
   let tableHeader = type === 'students' 
     ? `<tr><th style="width: 5%;">م</th><th style="width: 30%;">اسم الطالب</th><th style="width: 15%;">نوع المخالفة</th><th style="width: 10%;">الفصل</th><th style="width: 25%;">المعلم الراصد</th><th style="width: 15%;">الوقت</th></tr>`
     : `<tr><th style="width: 10%;">م</th><th style="width: 45%;">اسم المعلم </th><th style="width: 25%;">الفصل المسند</th><th style="width: 20%;">حالة الرصد</th></tr>`;
@@ -99,16 +97,33 @@ const generateOfficialReport = (title: string, dataList: any[], schoolName: stri
          <div>يعتمد، مدير المدرسة: ........................</div>
        </div>
        <div class="footer-note">تم استخراج هذا التقرير إلكترونياً من نظام راصد - برمجة وتطوير: ALZZABI MOHAMMAD</div>
-       <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };</script>
     </body>
     </html>
   `;
-  printWindow.document.open(); printWindow.document.write(htmlContent); printWindow.document.close();
+
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'absolute';
+  iframe.style.width = '0px';
+  iframe.style.height = '0px';
+  iframe.style.border = 'none';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (doc) {
+    doc.open();
+    doc.write(htmlContent);
+    doc.close();
+  }
+
+  setTimeout(() => {
+    iframe.contentWindow?.focus();
+    iframe.contentWindow?.print();
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 2000);
+  }, 500);
 };
 
-// =========================================================
-// 💉 2. المكون الجذري للتطبيق يغلف البوابة بالمخزن
-// =========================================================
 export default function App() {
   return (
     <AdminProvider>
@@ -117,9 +132,6 @@ export default function App() {
   );
 }
 
-// =========================================================
-// 3. قلب النظام الداخلي المتصل بالمخزن والسحابة
-// =========================================================
 function AdminDashboardCore() {
   const { dashboardData, setDashboardData } = useAdmin();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -128,6 +140,28 @@ function AdminDashboardCore() {
   const [activeSection, setActiveSection] = useState<Section>('dashboard');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // 🟢 الجراحة 1: رفع حالة بيانات الاحتياط للذاكرة المركزية
+  const [subsData, setSubsData] = useState<any[]>([]);
+  const [isSubsLoaded, setIsSubsLoaded] = useState(false);
+  const [isSubsLoading, setIsSubsLoading] = useState(false);
+
+  const fetchSubstitutions = async (forceRefresh = false) => {
+    if (isSubsLoaded && !forceRefresh) return; // يمنع الجلب التلقائي المزعج
+    setIsSubsLoading(true);
+    try {
+      const res = await fetch(`${SCRIPT_URL}?action=getSubstitutions&role=admin&schoolCode=${schoolCode}`);
+      const result = await res.json();
+      if (result.status === "success") {
+        setSubsData(result.data);
+        setIsSubsLoaded(true);
+      }
+    } catch (e) {
+      alert("خطأ في الاتصال بالسحابة لاستدعاء الاحتياط.");
+    } finally {
+      setIsSubsLoading(false);
+    }
+  };
 
   useEffect(() => { localStorage.setItem('rased_school_name', schoolName); }, [schoolName]);
 
@@ -158,7 +192,11 @@ function AdminDashboardCore() {
     }
   };
 
-  const handleLogout = () => { setIsLoggedIn(false); setActiveSection('dashboard'); };
+  const handleLogout = () => { 
+    setIsLoggedIn(false); 
+    setActiveSection('dashboard'); 
+    setIsSubsLoaded(false); // مسح الذاكرة عند تسجيل الخروج
+  };
 
   if (!isLoggedIn) return <LoginScreen schoolCode={schoolCode} setSchoolCode={setSchoolCode} onLogin={handleLogin} isLoading={isLoading} errorMsg={errorMsg} />;
 
@@ -178,7 +216,10 @@ function AdminDashboardCore() {
           <AnimatePresence mode="wait">
             <motion.div key={activeSection} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }} className="max-w-7xl mx-auto h-full">
               {activeSection === 'dashboard' && <DashboardHome data={dashboardData} schoolName={schoolName} />}
-              {activeSection === 'substitutions' && <SubstitutionsRadar schoolCode={schoolCode} schoolName={schoolName} />}
+              
+              {/* 🟢 الجراحة 2: تمرير الذاكرة المخبأة كـ Props للمكون لكي لا يفقد بياناته */}
+              {activeSection === 'substitutions' && <SubstitutionsRadar schoolName={schoolName} data={subsData} isLoading={isSubsLoading} onFetch={fetchSubstitutions} />}
+              
               {activeSection === 'reports' && <ReportsPage data={dashboardData} schoolName={schoolName} />}
               {activeSection === 'search' && <SearchPage data={dashboardData} />}
               {activeSection === 'settings' && <SettingsPage schoolCode={schoolCode} schoolName={schoolName} setSchoolName={setSchoolName} />}
@@ -190,28 +231,15 @@ function AdminDashboardCore() {
   );
 }
 
-// =========================================================
-// 🛡️ شاشة رادار الاحتياط (المصفوفة الإدارية)
-// =========================================================
-function SubstitutionsRadar({ schoolCode, schoolName }: { schoolCode: string, schoolName: string }) {
-  const [data, setData] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+function SubstitutionsRadar({ schoolName, data, isLoading, onFetch }: { schoolName: string, data: any[], isLoading: boolean, onFetch: (force: boolean) => void }) {
+  
+  // 🟢 الجراحة 3: يطلب البيانات عند الفتح فقط إذا لم تكن موجودة في الذاكرة المخبأة
+  useEffect(() => { 
+    onFetch(false); 
+  }, []);
 
-  const fetchSubstitutions = async () => {
-    setIsLoading(true);
-    try {
-      const res = await fetch(`${SCRIPT_URL}?action=getSubstitutions&role=admin&schoolCode=${schoolCode}`);
-      const result = await res.json();
-      if (result.status === "success") setData(result.data);
-    } catch (e) { alert("خطأ في الاتصال بالسحابة لاستدعاء الاحتياط."); }
-    finally { setIsLoading(false); }
-  };
-
-  useEffect(() => { fetchSubstitutions(); }, []);
-
-  // 🟢 الجراحة الأولى: بناء المصفوفة مع تجاهل فروقات التوقيت (Timezone Mismatch Fix)
   const matrixData = useMemo(() => {
-    const todayCA = new Date().toLocaleDateString('en-CA'); // يخرج بصيغة: YYYY-MM-DD
+    const todayCA = new Date().toLocaleDateString('en-CA');
     
     const todayData = data.filter(d => {
       if (!d.date) return false;
@@ -237,9 +265,6 @@ function SubstitutionsRadar({ schoolCode, schoolName }: { schoolCode: string, sc
   }, [data]);
 
   const printMatrixReport = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return alert('الرجاء السماح بالنوافذ المنبثقة.');
-    
     let tableRows = '';
     if(matrixData.length === 0) {
       tableRows = `<tr><td colspan="9" style="text-align:center; padding: 20px;">لا توجد حصص احتياط مسجلة لهذا اليوم.</td></tr>`;
@@ -294,11 +319,31 @@ function SubstitutionsRadar({ schoolCode, schoolName }: { schoolCode: string, sc
             <div>إعداد المناوب الإداري: ....................</div>
             <div>يعتمد، مدير المدرسة: ....................</div>
          </div>
-         <script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };</script>
       </body>
       </html>
     `;
-    printWindow.document.open(); printWindow.document.write(html); printWindow.document.close();
+    
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = 'none';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+    }
+
+    setTimeout(() => {
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 2000);
+    }, 500);
   };
 
   return (
@@ -312,7 +357,7 @@ function SubstitutionsRadar({ schoolCode, schoolName }: { schoolCode: string, sc
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <button onClick={fetchSubstitutions} className="p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm">
+          <button onClick={() => onFetch(true)} className="p-3 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm">
             <RefreshCw className={`text-slate-600 ${isLoading ? 'animate-spin' : ''}`} size={20} />
           </button>
           <button onClick={printMatrixReport} className="flex items-center gap-2 bg-emerald-600 text-white px-5 py-3 rounded-xl font-black hover:bg-emerald-700 transition shadow-lg active:scale-95">
@@ -374,27 +419,20 @@ function SubstitutionsRadar({ schoolCode, schoolName }: { schoolCode: string, sc
   );
 }
 
-// =========================================================
-// المكونات الفرعية (القائمة، الإعدادات، البحث)
-// =========================================================
-
 function DashboardHome({ data, schoolName }: { data: any, schoolName: string }) {
   const [activeTab, setActiveTab] = useState<'absent' | 'late' | 'truant'>('absent');
   const todayDate = new Date();
   const todayArabicName = getArabicDayName(todayDate);
 
-  // 🟢 الجراحة الثانية: فلترة المعلمين المستهدفين ليقتصر على "معلمي الحصة الأولى" فقط
   const expectedTeachersToday = useMemo(() => {
-    // 1. جلب كل حصص هذا اليوم
-    const todayClasses = data.teachers.filter((t: any) => t.day === todayArabicName);
+    const normalizedToday = normalizeText(todayArabicName);
+    const todayClasses = data.teachers.filter((t: any) => normalizeText(t.day) === normalizedToday);
     
-    // 2. تصفية "الحصة الأولى" فقط لمعرفة من يجب عليه الرصد صباحاً
     const firstPeriodClasses = todayClasses.filter((t: any) => {
       const p = String(t.period).trim();
       return p === '1' || p.includes('الأولى') || p === '01';
     });
 
-    // 3. إزالة التكرار (لتجنب ظهور اسم المعلم مرتين إذا كان يدرس فصلين مدمجين)
     const uniqueTeachersMap = new Map();
     firstPeriodClasses.forEach((t: any) => {
       if (!uniqueTeachersMap.has(t.name)) {
@@ -576,7 +614,9 @@ function ReportsPage({ data, schoolName }: { data: any, schoolName: string }) {
   const reportData = useMemo(() => {
     const targetDate = new Date(selectedDateStr);
     const targetArabicDay = getArabicDayName(targetDate);
-    const expected = data.teachers.filter((t: any) => t.day === targetArabicDay);
+    const normalizedTargetDay = normalizeText(targetArabicDay);
+
+    const expected = data.teachers.filter((t: any) => normalizeText(t.day) === normalizedTargetDay);
     const logsForDate = data.logs.filter((log: any) => isSameDate(log.time, targetDate));
 
     const uniqueLogsForDate = new Map();
