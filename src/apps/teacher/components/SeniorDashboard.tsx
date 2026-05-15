@@ -25,7 +25,7 @@ const handleAssign = async (e: React.FormEvent) => {
     return;
   }
 
-  const ADMIN_SCRIPT_URL = "ضع_هنا_رابط_سحابة_الإدارة_الجديد"; // 👈 ضع الرابط الذي استخرجته بعد عمل New Deployment
+  const ADMIN_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwZHhZ-RPWUpBGIlw0qTFPUmOPmq9WpcvW4WLklcjb_A9U3MW0luIXYPnHznI29ThpbMA/exec"
 
   const newAssignment = {
     action: "createSubstitution", // المجلد المستهدف في السيرفر
