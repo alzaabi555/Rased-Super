@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ArrowRight, Check, Loader2, Award, TrendingUp } from 'lucide-react';
+import { ArrowRight, Check, Loader2, Award, TrendingUp, Users } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Student } from '../types';
 import StudentReport from './StudentReport';
@@ -11,6 +11,17 @@ import html2pdf from 'html2pdf.js';
 import PageLayout from '../components/PageLayout'; 
 
 import ParentCardsTemplate from './ParentCardsTemplate';
+
+// =================================================================================
+// ✅ الثوابت (تصنيفات الدرجات)
+// =================================================================================
+const GRADE_CATEGORIES = [
+    { key: 'A', label: 'أ (ممتاز)', color: 'bg-emerald-100', bar: 'bg-emerald-500', text: 'text-emerald-700' },
+    { key: 'B', label: 'ب (جيد جداً)', color: 'bg-blue-100', bar: 'bg-blue-500', text: 'text-blue-700' },
+    { key: 'C', label: 'ج (جيد)', color: 'bg-yellow-100', bar: 'bg-yellow-400', text: 'text-yellow-700' },
+    { key: 'D', label: 'د (مقبول)', color: 'bg-orange-100', bar: 'bg-orange-400', text: 'text-orange-700' },
+    { key: 'F', label: 'هـ (ضعيف)', color: 'bg-rose-100', bar: 'bg-rose-500', text: 'text-rose-700' },
+];
 
 // =================================================================================
 // ✅ أيقونات 3D 
@@ -317,7 +328,7 @@ const PrintPreviewModal: React.FC<{
 // ✅ القوالب المحدثة (للتباعة)
 // =================================================================================
 
-// 💉 قالب طباعة الإحصائيات (جديد)
+// 💉 قالب طباعة الإحصائيات (محدث بالتفصيل للفصول)
 const AnalyticsTemplate = ({ data, teacherInfo, targetClass }: any) => {
     const { t, dir, language } = useApp();
     const date = new Date().toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US');
@@ -337,12 +348,11 @@ const AnalyticsTemplate = ({ data, teacherInfo, targetClass }: any) => {
         );
     };
 
-    const cats = [
-        { key: 'A', label: 'أ (ممتاز)', color: 'bg-emerald-100', bar: 'bg-emerald-500' },
-        { key: 'B', label: 'ب (جيد جداً)', color: 'bg-blue-100', bar: 'bg-blue-500' },
-        { key: 'C', label: 'ج (جيد)', color: 'bg-yellow-100', bar: 'bg-yellow-400' },
-        { key: 'D', label: 'د (مقبول)', color: 'bg-orange-100', bar: 'bg-orange-400' },
-        { key: 'F', label: 'هـ (ضعيف)', color: 'bg-rose-100', bar: 'bg-rose-500' },
+    // مصفوفة الفصول المتعددة للطباعة
+    const reportSections = [
+        { id: 'sem1', title: 'تفصيل نتائج الفصل الدراسي الأول', dataObj: data.sem1, isFinal: false },
+        { id: 'sem2', title: 'تفصيل نتائج الفصل الدراسي الثاني', dataObj: data.sem2, isFinal: false },
+        { id: 'final', title: 'تفصيل النتيجة العامة النهائية', dataObj: data.final, isFinal: true },
     ];
 
     return (
@@ -388,61 +398,78 @@ const AnalyticsTemplate = ({ data, teacherInfo, targetClass }: any) => {
             </div>
 
             {/* Visual Chart Row */}
-            <div className="flex gap-4 mb-8">
+            <div className="flex gap-4 mb-8 border-b-2 border-black pb-8">
                 <div className="flex-1 border border-black p-3 rounded-xl">
                     <h4 className="font-bold text-[10px] text-center mb-3">نسب نتائج الفصل الأول</h4>
-                    {cats.map(c => renderBar(data.sem1[c.key as keyof typeof data.sem1].length, data.totalStudents, c.bar, c.label))}
+                    {GRADE_CATEGORIES.map(c => renderBar(data.sem1[c.key as keyof typeof data.sem1].length, data.totalStudents, c.bar, c.label))}
                 </div>
                 <div className="flex-1 border border-black p-3 rounded-xl">
                     <h4 className="font-bold text-[10px] text-center mb-3">نسب نتائج الفصل الثاني</h4>
-                    {cats.map(c => renderBar(data.sem2[c.key as keyof typeof data.sem2].length, data.totalStudents, c.bar, c.label))}
+                    {GRADE_CATEGORIES.map(c => renderBar(data.sem2[c.key as keyof typeof data.sem2].length, data.totalStudents, c.bar, c.label))}
                 </div>
                 <div className="flex-1 border-2 border-black p-3 rounded-xl bg-indigo-50/30">
                     <h4 className="font-black text-xs text-center mb-3">النتيجة العامة النهائية</h4>
-                    {cats.map(c => renderBar(data.final[c.key as keyof typeof data.final].length, data.totalStudents, c.bar, c.label))}
+                    {GRADE_CATEGORIES.map(c => renderBar(data.final[c.key as keyof typeof data.final].length, data.totalStudents, c.bar, c.label))}
                 </div>
             </div>
 
-            {/* Detailed Tables */}
-            <h3 className="font-black text-sm mb-4 border-b-2 border-black inline-block">تفصيل أسماء الطلاب حسب النتيجة النهائية:</h3>
-            
-            {cats.map(cat => {
-                const studentsList = data.final[cat.key as keyof typeof data.final] as any[];
-                if (studentsList.length === 0) return null;
-                return (
-                    <div key={cat.key} className="mb-6 html2pdf__page-break-avoid" style={{ pageBreakInside: 'avoid' }}>
-                        <div className={`border border-black border-b-0 p-2 font-bold text-xs ${cat.color} flex justify-between`}>
-                            <span>الطلاب الحاصلون على تقدير: {cat.label}</span>
-                            <span>العدد: {studentsList.length} طلاب</span>
-                        </div>
-                        <table className="w-full border-collapse border border-black text-[10px]">
-                            <thead>
-                                <tr className="bg-gray-100">
-                                    <th className="border border-black p-1.5 w-8 text-center">م</th>
-                                    <th className={`border border-black p-1.5 text-${dir === 'rtl' ? 'right' : 'left'}`}>اسم الطالب</th>
-                                    <th className="border border-black p-1.5 w-20 text-center">مجموع ف1</th>
-                                    <th className="border border-black p-1.5 w-20 text-center">مجموع ف2</th>
-                                    <th className="border border-black p-1.5 w-24 text-center font-bold">المعدل النهائي</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {[...studentsList].sort((a, b) => b.final - a.final).map((s, idx) => (
-                                    <tr key={idx}>
-                                        <td className="border border-black p-1.5 text-center">{idx + 1}</td>
-                                        <td className={`border border-black p-1.5 font-bold text-${dir === 'rtl' ? 'right' : 'left'}`}>{s.name}</td>
-                                        <td className="border border-black p-1.5 text-center">{s.sem1}</td>
-                                        <td className="border border-black p-1.5 text-center">{s.sem2}</td>
-                                        <td className="border border-black p-1.5 text-center font-black">{s.final}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                );
-            })}
+            {/* Detailed Tables (Iterating over semesters and final) */}
+            {reportSections.map((section, secIdx) => (
+                <div key={section.id} className={`${secIdx > 0 ? 'mt-8' : ''}`}>
+                    <h3 className="font-black text-sm mb-4 border-b border-black inline-block pb-1">{section.title}:</h3>
+                    
+                    {GRADE_CATEGORIES.map(cat => {
+                        const studentsList = section.dataObj[cat.key as keyof typeof section.dataObj] as any[];
+                        if (!studentsList || studentsList.length === 0) return null;
+                        
+                        return (
+                            <div key={cat.key} className="mb-4 html2pdf__page-break-avoid" style={{ pageBreakInside: 'avoid' }}>
+                                <div className={`border border-black border-b-0 p-2 font-bold text-[11px] ${cat.color} flex justify-between`}>
+                                    <span>الطلاب الحاصلون على تقدير: {cat.label}</span>
+                                    <span>العدد: {studentsList.length} طلاب</span>
+                                </div>
+                                <table className="w-full border-collapse border border-black text-[10px]">
+                                    <thead>
+                                        <tr className="bg-gray-100">
+                                            <th className="border border-black p-1.5 w-8 text-center">م</th>
+                                            <th className={`border border-black p-1.5 text-${dir === 'rtl' ? 'right' : 'left'}`}>اسم الطالب</th>
+                                            {section.isFinal ? (
+                                                <>
+                                                    <th className="border border-black p-1.5 w-16 text-center">مجموع ف1</th>
+                                                    <th className="border border-black p-1.5 w-16 text-center">مجموع ف2</th>
+                                                    <th className="border border-black p-1.5 w-20 text-center font-bold">المعدل النهائي</th>
+                                                </>
+                                            ) : (
+                                                <th className="border border-black p-1.5 w-24 text-center font-bold">درجة الفصل</th>
+                                            )}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {[...studentsList].sort((a, b) => section.isFinal ? b.final - a.final : b.score - a.score).map((s, idx) => (
+                                            <tr key={idx}>
+                                                <td className="border border-black p-1.5 text-center">{idx + 1}</td>
+                                                <td className={`border border-black p-1.5 font-bold text-${dir === 'rtl' ? 'right' : 'left'}`}>{s.name}</td>
+                                                {section.isFinal ? (
+                                                    <>
+                                                        <td className="border border-black p-1.5 text-center">{s.sem1}</td>
+                                                        <td className="border border-black p-1.5 text-center">{s.sem2}</td>
+                                                        <td className="border border-black p-1.5 text-center font-black">{s.final}</td>
+                                                    </>
+                                                ) : (
+                                                    <td className="border border-black p-1.5 text-center font-black">{s.score}</td>
+                                                )}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        );
+                    })}
+                </div>
+            ))}
 
             {/* Signatures */}
-            <div className="flex justify-between items-end pt-8 mt-8 border-t-2 border-black relative">
+            <div className="flex justify-between items-end pt-8 mt-8 border-t-2 border-black relative html2pdf__page-break-avoid" style={{ pageBreakInside: 'avoid' }}>
                 <div className="text-center w-1/3">
                     <p className="font-bold text-xs mb-6">معلم المادة</p>
                     <p className="font-black text-sm">{teacherInfo?.name || '....................'}</p>
@@ -1142,8 +1169,10 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
   const [cardsGrade, setCardsGrade] = useState<string>('all');
   const [cardsClass, setCardsClass] = useState<string>('all');
 
+  // 💉 حالة قسم الإحصائيات 
   const [analyticsGrade, setAnalyticsGrade] = useState<string>('all');
   const [analyticsClass, setAnalyticsClass] = useState<string>('all');
+  const [analyticsDetailTab, setAnalyticsDetailTab] = useState<'sem1' | 'sem2' | 'final'>('final');
 
   const [previewData, setPreviewData] = useState<{ isOpen: boolean; title: string; content: React.ReactNode; landscape?: boolean }>({
     isOpen: false, title: '', content: null
@@ -1710,6 +1739,7 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
             </div>
           )}
 
+          {/* 💉 التبويب الجديد: الإحصائيات (Analytics) مع شاشة التفاصيل */}
           {activeTab === 'analytics' && (
             <div className="space-y-6 animate-in fade-in duration-500">
               <div className="flex items-center gap-3 border-b pb-4 mb-2 border-borderColor">
@@ -1760,42 +1790,63 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
 
                       {/* الرسومات البيانية */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
-                          
                           <div className="border border-borderColor bg-bgCard p-5 rounded-2xl shadow-sm">
                               <h4 className="font-black text-sm text-center mb-6 text-textPrimary">نتائج الفصل الأول</h4>
-                              {renderProgressBar(analyticsData.sem1.A.length, analyticsData.totalStudents, 'bg-emerald-500', 'أ (ممتاز)')}
-                              {renderProgressBar(analyticsData.sem1.B.length, analyticsData.totalStudents, 'bg-blue-500', 'ب (جيد جداً)')}
-                              {renderProgressBar(analyticsData.sem1.C.length, analyticsData.totalStudents, 'bg-yellow-400', 'ج (جيد)')}
-                              {renderProgressBar(analyticsData.sem1.D.length, analyticsData.totalStudents, 'bg-orange-400', 'د (مقبول)')}
-                              {renderProgressBar(analyticsData.sem1.F.length, analyticsData.totalStudents, 'bg-rose-500', 'هـ (ضعيف)')}
+                              {GRADE_CATEGORIES.map(c => renderBar(analyticsData.sem1[c.key as keyof typeof analyticsData.sem1].length, analyticsData.totalStudents, c.bar, c.label))}
                           </div>
 
                           <div className="border border-borderColor bg-bgCard p-5 rounded-2xl shadow-sm">
                               <h4 className="font-black text-sm text-center mb-6 text-textPrimary">نتائج الفصل الثاني</h4>
-                              {renderProgressBar(analyticsData.sem2.A.length, analyticsData.totalStudents, 'bg-emerald-500', 'أ (ممتاز)')}
-                              {renderProgressBar(analyticsData.sem2.B.length, analyticsData.totalStudents, 'bg-blue-500', 'ب (جيد جداً)')}
-                              {renderProgressBar(analyticsData.sem2.C.length, analyticsData.totalStudents, 'bg-yellow-400', 'ج (جيد)')}
-                              {renderProgressBar(analyticsData.sem2.D.length, analyticsData.totalStudents, 'bg-orange-400', 'د (مقبول)')}
-                              {renderProgressBar(analyticsData.sem2.F.length, analyticsData.totalStudents, 'bg-rose-500', 'هـ (ضعيف)')}
+                              {GRADE_CATEGORIES.map(c => renderBar(analyticsData.sem2[c.key as keyof typeof analyticsData.sem2].length, analyticsData.totalStudents, c.bar, c.label))}
                           </div>
 
                           <div className="border-2 border-indigo-100 bg-indigo-50/50 p-5 rounded-2xl shadow-sm">
                               <h4 className="font-black text-sm text-center mb-6 text-indigo-900 flex items-center justify-center gap-2">
                                   <TrendingUp className="w-4 h-4" /> النتيجة العامة النهائية
                               </h4>
-                              {renderProgressBar(analyticsData.final.A.length, analyticsData.totalStudents, 'bg-emerald-500', 'أ (ممتاز)')}
-                              {renderProgressBar(analyticsData.final.B.length, analyticsData.totalStudents, 'bg-blue-500', 'ب (جيد جداً)')}
-                              {renderProgressBar(analyticsData.final.C.length, analyticsData.totalStudents, 'bg-yellow-400', 'ج (جيد)')}
-                              {renderProgressBar(analyticsData.final.D.length, analyticsData.totalStudents, 'bg-orange-400', 'د (مقبول)')}
-                              {renderProgressBar(analyticsData.final.F.length, analyticsData.totalStudents, 'bg-rose-500', 'هـ (ضعيف)')}
+                              {GRADE_CATEGORIES.map(c => renderBar(analyticsData.final[c.key as keyof typeof analyticsData.final].length, analyticsData.totalStudents, c.bar, c.label))}
                           </div>
-
                       </div>
 
-                      {/* 💉 زر طباعة التقرير الإحصائي الجديد */}
+                      {/* 💉 قسم جديد: تفاصيل الأسماء في واجهة التطبيق */}
+                      <div className="mt-8 border-t border-borderColor pt-6">
+                          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                              <h4 className="font-black text-base text-textPrimary flex items-center gap-2"><Users className="w-5 h-5 text-indigo-600"/> قوائم تفصيلية للنتائج:</h4>
+                              <div className="flex bg-bgSoft p-1 rounded-xl border border-borderColor shadow-inner">
+                                  <button onClick={() => setAnalyticsDetailTab('sem1')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${analyticsDetailTab === 'sem1' ? 'bg-bgCard shadow-sm text-indigo-600' : 'text-textSecondary hover:text-textPrimary'}`}>الفصل الأول</button>
+                                  <button onClick={() => setAnalyticsDetailTab('sem2')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${analyticsDetailTab === 'sem2' ? 'bg-bgCard shadow-sm text-indigo-600' : 'text-textSecondary hover:text-textPrimary'}`}>الفصل الثاني</button>
+                                  <button onClick={() => setAnalyticsDetailTab('final')} className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${analyticsDetailTab === 'final' ? 'bg-bgCard shadow-sm text-indigo-600' : 'text-textSecondary hover:text-textPrimary'}`}>النتيجة النهائية</button>
+                              </div>
+                          </div>
+
+                          {GRADE_CATEGORIES.map(cat => {
+                              const list = analyticsData[analyticsDetailTab][cat.key as keyof typeof analyticsData.sem1] as any[];
+                              if (!list || list.length === 0) return null;
+                              return (
+                                  <div key={cat.key} className="mb-4 bg-bgCard border border-borderColor rounded-2xl overflow-hidden shadow-sm">
+                                      <div className={`p-3 ${cat.color.replace('bg-', 'bg-opacity-20 bg-')} flex justify-between items-center border-b border-borderColor`}>
+                                          <span className={`font-black text-sm ${cat.text}`}>تقدير: {cat.label}</span>
+                                          <span className={`text-xs font-black bg-white/60 px-2 py-1 rounded-lg ${cat.text}`}>{list.length} طلاب</span>
+                                      </div>
+                                      <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                          {[...list].sort((a,b) => analyticsDetailTab === 'final' ? b.final - a.final : b.score - a.score).map((s, idx) => (
+                                              <div key={idx} className="flex justify-between items-center bg-bgSoft p-2.5 rounded-xl border border-borderColor hover:border-indigo-300 transition-colors">
+                                                  <span className="font-bold text-xs text-textPrimary truncate px-1">{s.name}</span>
+                                                  <span className="text-xs font-black px-2 py-1 rounded bg-bgCard text-textPrimary shadow-sm border border-borderColor min-w-[35px] text-center">
+                                                      {analyticsDetailTab === 'final' ? s.final : s.score}
+                                                  </span>
+                                              </div>
+                                          ))}
+                                      </div>
+                                  </div>
+                              )
+                          })}
+                      </div>
+
+                      {/* زر الطباعة */}
                       <div className="flex justify-end pt-4 mt-6 border-t border-borderColor">
                           <button onClick={openAnalyticsPreview} className="w-full text-white px-6 py-4 rounded-xl font-black text-xs flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all bg-indigo-600 hover:bg-indigo-700">
-                              <Icon3DPrint className="w-5 h-5" /> طباعة التقرير الإحصائي التفصيلي
+                              <Icon3DPrint className="w-5 h-5" /> طباعة التقرير الإحصائي التفصيلي (لجميع الفصول)
                           </button>
                       </div>
                   </>
