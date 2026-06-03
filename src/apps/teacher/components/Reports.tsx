@@ -8,9 +8,8 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 import html2pdf from 'html2pdf.js';
-import PageLayout from '../components/PageLayout'; // 💉 استدعاء الغلاف الشامل
+import PageLayout from '../components/PageLayout'; 
 
-// ✅ استدعاء قالب البطاقات الجديد
 import ParentCardsTemplate from './ParentCardsTemplate';
 
 // =================================================================================
@@ -275,7 +274,7 @@ const PrintPreviewModal: React.FC<{
               padding: '0',
               direction: dir, 
               fontFamily: 'Tajawal, sans-serif',
-              backgroundColor: '#ffffff', // 👈 حماية للطباعة بالحبر الأبيض والأسود
+              backgroundColor: '#ffffff',
               color: '#000000',
               boxSizing: 'border-box'
             }}
@@ -347,12 +346,20 @@ const GradesTemplate = ({ students, tools, teacherInfo, semester, gradeClass }: 
                   )}
                   <th className="border border-black p-1 bg-gray-300 text-center font-black text-black">{t('overallLabel')} ({settings.totalScore})</th>
                   <th className="border border-black p-1 text-center text-black">{t('gradeSymbolLabel')}</th>
+                  
+                  {/* 💉 الجراحة الدقيقة: إضافة أعمدة النتيجة النهائية في رأس الجدول */}
+                  <th className="border border-black p-1 bg-amber-100 text-center text-black font-bold">مجموع ف1</th>
+                  <th className="border border-black p-1 bg-amber-100 text-center text-black font-bold">مجموع ف2</th>
+                  <th className="border border-black p-1 bg-emerald-100 text-center text-black font-black">المعدل النهائي</th>
+                  <th className="border border-black p-1 bg-emerald-100 text-center text-black font-bold">التقدير العام</th>
                 </tr>
               </thead>
 
               <tbody>
                 {chunk.map((s: any, i: number) => {
                   const globalIndex = (pageIndex * ROWS_PER_PAGE) + i + 1;
+                  
+                  // حسابات الفصل الحالي (المختارة من الشاشة)
                   const semGrades = (s.grades || []).filter((g: any) => (g.semester || '1') === semester);
                   let contSum = 0;
 
@@ -381,6 +388,8 @@ const GradesTemplate = ({ students, tools, teacherInfo, semester, gradeClass }: 
                   }
 
                   const total = contSum + finalVal;
+
+                  // دالة جلب الرمز
                   const getSymbol = (sc: number) => {
                     const percent = (sc / settings.totalScore) * 100;
                     if (dir === 'rtl') {
@@ -398,6 +407,24 @@ const GradesTemplate = ({ students, tools, teacherInfo, semester, gradeClass }: 
                     }
                   };
 
+                  // 💉 الجراحة الدقيقة: حساب النتيجة النهائية للعام الدراسي (ف1 + ف2)
+                  const sem1Grades = (s.grades || []).filter((g: any) => (g.semester || '1') === '1');
+                  const sem2Grades = (s.grades || []).filter((g: any) => (g.semester || '1') === '2');
+                  
+                  let sem1Total = 0;
+                  let sem2Total = 0;
+                  
+                  tools.forEach((t: any) => {
+                      const g1 = sem1Grades.find((r: any) => r.category.trim() === t.name.trim());
+                      if (g1) sem1Total += (Number(g1.score) || 0);
+                      
+                      const g2 = sem2Grades.find((r: any) => r.category.trim() === t.name.trim());
+                      if (g2) sem2Total += (Number(g2.score) || 0);
+                  });
+
+                  const finalAverage = (sem1Total + sem2Total) / 2;
+                  const finalYearSymbol = getSymbol(finalAverage);
+
                   return (
                     <tr key={s.id || i}>
                       <td className="border border-black p-1 text-center text-black">{globalIndex}</td>
@@ -407,6 +434,12 @@ const GradesTemplate = ({ students, tools, teacherInfo, semester, gradeClass }: 
                       {finalWeight > 0 && finalCell}
                       <td className="border border-black p-1 text-center font-black bg-gray-100 text-black">{total}</td>
                       <td className="border border-black p-1 text-center font-bold text-black">{getSymbol(total)}</td>
+                      
+                      {/* 💉 الجراحة الدقيقة: طباعة بيانات النتيجة النهائية في الجدول */}
+                      <td className="border border-black p-1 text-center bg-amber-50 text-black">{sem1Total > 0 ? sem1Total : '-'}</td>
+                      <td className="border border-black p-1 text-center bg-amber-50 text-black">{sem2Total > 0 ? sem2Total : '-'}</td>
+                      <td className="border border-black p-1 text-center font-black bg-emerald-50 text-black">{finalAverage > 0 ? finalAverage : '-'}</td>
+                      <td className="border border-black p-1 text-center font-bold bg-emerald-50 text-emerald-700">{finalAverage > 0 ? finalYearSymbol : '-'}</td>
                     </tr>
                   );
                 })}
@@ -681,6 +714,25 @@ const ClassReportsTemplate = ({ students, teacherInfo, semester, assessmentTools
     return map[desc] || desc; 
   };
 
+  // دالة الرمز
+  const getSymbol = (sc: number) => {
+    const totalPossible = settings?.totalScore || 100;
+    const percent = (sc / totalPossible) * 100;
+    if (dir === 'rtl') {
+        if (percent >= 90) return 'أ';
+        if (percent >= 80) return 'ب';
+        if (percent >= 65) return 'ج';
+        if (percent >= 50) return 'د';
+        return 'هـ';
+    } else {
+        if (percent >= 90) return 'A';
+        if (percent >= 80) return 'B';
+        if (percent >= 65) return 'C';
+        if (percent >= 50) return 'D';
+        return 'F';
+    }
+  };
+
   return (
     <div className="w-full text-black bg-white" dir={dir}>
       {safeStudents.map((student: any) => {
@@ -708,6 +760,21 @@ const ClassReportsTemplate = ({ students, teacherInfo, semester, assessmentTools
         const truantCount = (student.attendance || []).filter((a: any) => a.status === 'truant').length;
         const totalPositive = posBehaviors.reduce((acc: number, b: any) => acc + b.points, 0);
         const totalNegative = negBehaviors.reduce((acc: number, b: any) => acc + Math.abs(b.points), 0);
+
+        // 💉 الجراحة الدقيقة: حساب النتيجة النهائية للعام (ف1 + ف2)
+        const sem1Grades = (student.grades || []).filter((g: any) => (g.semester || '1') === '1');
+        const sem2Grades = (student.grades || []).filter((g: any) => (g.semester || '1') === '2');
+        let sem1Total = 0;
+        let sem2Total = 0;
+        
+        safeTools.forEach((t: any) => {
+            const g1 = sem1Grades.find((r: any) => r.category.trim() === t.name.trim());
+            if (g1) sem1Total += (Number(g1.score) || 0);
+            
+            const g2 = sem2Grades.find((r: any) => r.category.trim() === t.name.trim());
+            if (g2) sem2Total += (Number(g2.score) || 0);
+        });
+        const finalAverage = (sem1Total + sem2Total) / 2;
 
         return (
           <div key={student.id} className="w-full min-h-[297mm] p-10 border-b border-black page-break-after-always relative bg-white" style={{ pageBreakAfter: 'always' }}>
@@ -743,7 +810,7 @@ const ClassReportsTemplate = ({ students, teacherInfo, semester, assessmentTools
 
             <h3 className="font-bold text-lg mb-3 border-b-2 border-black inline-block text-black">{t('academicAchievement')}</h3>
 
-            <table className="w-full border-collapse border border-black text-sm mb-8 text-black">
+            <table className="w-full border-collapse border border-black text-sm mb-4 text-black">
               <thead>
                 <tr className="bg-gray-100">
                   <th className={`border border-black p-3 text-${dir === 'rtl' ? 'right' : 'left'}`}>{t('subjectCol')}</th>
@@ -778,6 +845,31 @@ const ClassReportsTemplate = ({ students, teacherInfo, semester, assessmentTools
                 </tr>
               </tbody>
             </table>
+
+            {/* 💉 الجراحة الدقيقة: الصندوق الذهبي للنتيجة النهائية للعام */}
+            <div className="flex border-2 border-black rounded-xl overflow-hidden mb-8 bg-amber-50">
+                <div className="bg-amber-200 p-4 border-l-2 border-black flex items-center justify-center font-black text-black">
+                    النتيجة النهائية<br/>للعام الدراسي
+                </div>
+                <div className="flex-1 flex justify-around items-center p-4">
+                    <div className="text-center">
+                        <p className="text-xs font-bold mb-1">مجموع الفصل 1</p>
+                        <p className="font-black text-lg">{sem1Total}</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-xs font-bold mb-1">مجموع الفصل 2</p>
+                        <p className="font-black text-lg">{sem2Total}</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-xs font-bold mb-1">المعدل النهائي</p>
+                        <p className="font-black text-xl text-blue-800">{finalAverage}</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-xs font-bold mb-1">التقدير العام</p>
+                        <p className="font-black text-2xl text-emerald-700">{getSymbol(finalAverage)}</p>
+                    </div>
+                </div>
+            </div>
 
             <div className="flex gap-6 mb-8">
               <div className="flex-1 border-2 border-black p-4 rounded-xl text-center">
@@ -894,7 +986,6 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
     isOpen: false, title: '', content: null
   });
 
-  // 🛡️ دروع الحماية الأساسية من أي بيانات فاسدة أو طلاب ناقصين
   const safeStudents = Array.isArray(students) ? students : [];
   const safeClasses = Array.isArray(classes) ? classes : [];
 
@@ -930,7 +1021,6 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
     });
   };
 
-  // 🛡️ الفلاتر المدرعة لمنع أي انهيار بسبب الفصول المفقودة
   const filteredStudentsForStudentTab = useMemo(() => safeStudents.filter(s => Array.isArray(s?.classes) && s.classes.includes(stClass)), [safeStudents, stClass]);
   const filteredStudentsForGrades = useMemo(() => safeStudents.filter(s => gradesClass === 'all' || (Array.isArray(s?.classes) && s.classes.includes(gradesClass))), [safeStudents, gradesClass]);
   const filteredStudentsForCert = useMemo(() => safeStudents.filter(s => Array.isArray(s?.classes) && s.classes.includes(certClass)), [safeStudents, certClass]);
@@ -1066,7 +1156,6 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
         subtitle={t('printStatementsAndCertificates')}
         icon={<Icon3DReportCenter className="w-full h-full p-1" />}
         
-        // 💉 هنا تم نقل الألسنة (Tabs) لتختفي وتظهر بذكاء مع حركة الشاشة
         leftActions={
           <div className="flex gap-2 md:gap-3 overflow-x-auto no-scrollbar pb-2 px-1 w-full" style={{ WebkitAppRegion: 'no-drag' } as any}>
             {tabs.map(tab => {
