@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ArrowRight, Check, Loader2, Award } from 'lucide-react';
+import { ArrowRight, Check, Loader2, Award, TrendingUp } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Student } from '../types';
 import StudentReport from './StudentReport';
@@ -173,10 +173,37 @@ const Icon3DEye = ({ className }: { className?: string }) => (
   </svg>
 );
 
+// 💉 أيقونة للإحصائيات
+const Icon3DAnalytics = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 100 100" className={className || "w-6 h-6"} xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="gradBar1" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#34d399" />
+        <stop offset="100%" stopColor="#059669" />
+      </linearGradient>
+      <linearGradient id="gradBar2" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#60a5fa" />
+        <stop offset="100%" stopColor="#2563eb" />
+      </linearGradient>
+      <linearGradient id="gradBar3" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#f472b6" />
+        <stop offset="100%" stopColor="#db2777" />
+      </linearGradient>
+    </defs>
+    <rect x="15" y="50" width="15" height="35" rx="4" fill="url(#gradBar1)" />
+    <rect x="42" y="25" width="15" height="60" rx="4" fill="url(#gradBar2)" />
+    <rect x="69" y="40" width="15" height="45" rx="4" fill="url(#gradBar3)" />
+    <path d="M10 90 H90" stroke="#94a3b8" strokeWidth="6" strokeLinecap="round" />
+    <path d="M22 40 L49 15 L76 30" fill="none" stroke="#fbbf24" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="49" cy="15" r="4" fill="#fbbf24" />
+    <circle cx="76" cy="30" r="4" fill="#fbbf24" />
+  </svg>
+);
+
 // =================================================================================
 
 interface ReportsProps {
-  initialTab?: 'student_report' | 'grades_record' | 'certificates' | 'parent_cards' | 'summon';
+  initialTab?: 'student_report' | 'grades_record' | 'certificates' | 'parent_cards' | 'summon' | 'analytics';
 }
 
 const getGradingSettings = () => {
@@ -288,7 +315,7 @@ const PrintPreviewModal: React.FC<{
 };
 
 // =================================================================================
-// ✅ القوالب المحدثة (للتباعة: تظل دائمًا بخلفية بيضاء لتوفير الحبر)
+// ✅ القوالب المحدثة (للتباعة)
 // =================================================================================
 
 const GradesTemplate = ({ students, tools, teacherInfo, semester, gradeClass }: any) => {
@@ -346,8 +373,6 @@ const GradesTemplate = ({ students, tools, teacherInfo, semester, gradeClass }: 
                   )}
                   <th className="border border-black p-1 bg-gray-300 text-center font-black text-black">{t('overallLabel')} ({settings.totalScore})</th>
                   <th className="border border-black p-1 text-center text-black">{t('gradeSymbolLabel')}</th>
-                  
-                  {/* 💉 الجراحة الدقيقة: إضافة أعمدة النتيجة النهائية في رأس الجدول */}
                   <th className="border border-black p-1 bg-amber-100 text-center text-black font-bold">مجموع ف1</th>
                   <th className="border border-black p-1 bg-amber-100 text-center text-black font-bold">مجموع ف2</th>
                   <th className="border border-black p-1 bg-emerald-100 text-center text-black font-black">المعدل النهائي</th>
@@ -358,8 +383,6 @@ const GradesTemplate = ({ students, tools, teacherInfo, semester, gradeClass }: 
               <tbody>
                 {chunk.map((s: any, i: number) => {
                   const globalIndex = (pageIndex * ROWS_PER_PAGE) + i + 1;
-                  
-                  // حسابات الفصل الحالي (المختارة من الشاشة)
                   const semGrades = (s.grades || []).filter((g: any) => (g.semester || '1') === semester);
                   let contSum = 0;
 
@@ -389,7 +412,6 @@ const GradesTemplate = ({ students, tools, teacherInfo, semester, gradeClass }: 
 
                   const total = contSum + finalVal;
 
-                  // دالة جلب الرمز
                   const getSymbol = (sc: number) => {
                     const percent = (sc / settings.totalScore) * 100;
                     if (dir === 'rtl') {
@@ -407,10 +429,8 @@ const GradesTemplate = ({ students, tools, teacherInfo, semester, gradeClass }: 
                     }
                   };
 
-                  // 💉 الجراحة الدقيقة: حساب النتيجة النهائية للعام الدراسي (ف1 + ف2)
                   const sem1Grades = (s.grades || []).filter((g: any) => (g.semester || '1') === '1');
                   const sem2Grades = (s.grades || []).filter((g: any) => (g.semester || '1') === '2');
-                  
                   let sem1Total = 0;
                   let sem2Total = 0;
                   
@@ -434,8 +454,6 @@ const GradesTemplate = ({ students, tools, teacherInfo, semester, gradeClass }: 
                       {finalWeight > 0 && finalCell}
                       <td className="border border-black p-1 text-center font-black bg-gray-100 text-black">{total}</td>
                       <td className="border border-black p-1 text-center font-bold text-black">{getSymbol(total)}</td>
-                      
-                      {/* 💉 الجراحة الدقيقة: طباعة بيانات النتيجة النهائية في الجدول */}
                       <td className="border border-black p-1 text-center bg-amber-50 text-black">{sem1Total > 0 ? sem1Total : '-'}</td>
                       <td className="border border-black p-1 text-center bg-amber-50 text-black">{sem2Total > 0 ? sem2Total : '-'}</td>
                       <td className="border border-black p-1 text-center font-black bg-emerald-50 text-black">{finalAverage > 0 ? finalAverage : '-'}</td>
@@ -714,7 +732,6 @@ const ClassReportsTemplate = ({ students, teacherInfo, semester, assessmentTools
     return map[desc] || desc; 
   };
 
-  // دالة الرمز
   const getSymbol = (sc: number) => {
     const totalPossible = settings?.totalScore || 100;
     const percent = (sc / totalPossible) * 100;
@@ -761,7 +778,6 @@ const ClassReportsTemplate = ({ students, teacherInfo, semester, assessmentTools
         const totalPositive = posBehaviors.reduce((acc: number, b: any) => acc + b.points, 0);
         const totalNegative = negBehaviors.reduce((acc: number, b: any) => acc + Math.abs(b.points), 0);
 
-        // 💉 الجراحة الدقيقة: حساب النتيجة النهائية للعام (ف1 + ف2)
         const sem1Grades = (student.grades || []).filter((g: any) => (g.semester || '1') === '1');
         const sem2Grades = (student.grades || []).filter((g: any) => (g.semester || '1') === '2');
         let sem1Total = 0;
@@ -846,7 +862,6 @@ const ClassReportsTemplate = ({ students, teacherInfo, semester, assessmentTools
               </tbody>
             </table>
 
-            {/* 💉 الجراحة الدقيقة: الصندوق الذهبي للنتيجة النهائية للعام */}
             <div className="flex border-2 border-black rounded-xl overflow-hidden mb-8 bg-amber-50">
                 <div className="bg-amber-200 p-4 border-l-2 border-black flex items-center justify-center font-black text-black">
                     النتيجة النهائية<br/>للعام الدراسي
@@ -948,7 +963,7 @@ const ClassReportsTemplate = ({ students, teacherInfo, semester, assessmentTools
 // =================================================================================
 const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
   const { students, setStudents, classes, teacherInfo, currentSemester, assessmentTools, certificateSettings, setCertificateSettings, t, dir, language } = useApp(); 
-  const [activeTab, setActiveTab] = useState<'student_report' | 'grades_record' | 'certificates' | 'parent_cards' | 'summon'>(initialTab || 'student_report');
+  const [activeTab, setActiveTab] = useState<'student_report' | 'grades_record' | 'certificates' | 'parent_cards' | 'summon' | 'analytics'>(initialTab || 'student_report');
 
   const [stGrade, setStGrade] = useState<string>('all');
   const [stClass, setStClass] = useState<string>('');
@@ -981,6 +996,10 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
 
   const [cardsGrade, setCardsGrade] = useState<string>('all');
   const [cardsClass, setCardsClass] = useState<string>('all');
+
+  // 💉 حالة قسم الإحصائيات الجديد
+  const [analyticsGrade, setAnalyticsGrade] = useState<string>('all');
+  const [analyticsClass, setAnalyticsClass] = useState<string>('all');
 
   const [previewData, setPreviewData] = useState<{ isOpen: boolean; title: string; content: React.ReactNode; landscape?: boolean }>({
     isOpen: false, title: '', content: null
@@ -1030,6 +1049,7 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
   useEffect(() => { const cls = getClassesForGrade(certGrade); if (cls.length > 0) setCertClass(cls[0]); }, [certGrade, classes]);
   useEffect(() => { const cls = getClassesForGrade(summonGrade); if (cls.length > 0) setSummonClass(cls[0]); }, [summonGrade, classes]);
   useEffect(() => { const cls = getClassesForGrade(cardsGrade); if (cls.length > 0) setCardsClass('all'); }, [cardsGrade, classes]); 
+  useEffect(() => { const cls = getClassesForGrade(analyticsGrade); if (cls.length > 0) setAnalyticsClass('all'); }, [analyticsGrade, classes]); 
   useEffect(() => { if (certificateSettings) setTempCertSettings(certificateSettings); }, [certificateSettings]);
 
   const handleUpdateStudent = (updatedStudent: Student) => {
@@ -1121,6 +1141,84 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
     setSelectedCertStudents(prev => prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]);
   };
 
+  // ==============================================================================
+  // 💉 محرك الإحصائيات (الحسابات الذكية لمعالجة بيانات الصف بأكمله)
+  // ==============================================================================
+  const analyticsData = useMemo(() => {
+      const targetStudents = safeStudents.filter(s => analyticsClass === 'all' || (Array.isArray(s?.classes) && s.classes.includes(analyticsClass)));
+      
+      const stats = {
+          totalStudents: targetStudents.length,
+          sem1: { A: 0, B: 0, C: 0, D: 0, F: 0, totalScore: 0 },
+          sem2: { A: 0, B: 0, C: 0, D: 0, F: 0, totalScore: 0 },
+          final: { A: 0, B: 0, C: 0, D: 0, F: 0, totalScore: 0 },
+          topStudent: { name: '-', score: 0 }
+      };
+
+      if (targetStudents.length === 0) return stats;
+
+      const safeTools = Array.isArray(assessmentTools) ? assessmentTools : [];
+      const totalPossibleScore = getGradingSettings()?.totalScore || 100;
+
+      const getCat = (sc: number) => {
+          const p = (sc / totalPossibleScore) * 100;
+          if (p >= 90) return 'A';
+          if (p >= 80) return 'B';
+          if (p >= 65) return 'C';
+          if (p >= 50) return 'D';
+          return 'F';
+      };
+
+      targetStudents.forEach(student => {
+          const sem1Grades = (student.grades || []).filter((g: any) => (g.semester || '1') === '1');
+          const sem2Grades = (student.grades || []).filter((g: any) => (g.semester || '1') === '2');
+          
+          let s1Total = 0;
+          let s2Total = 0;
+          
+          safeTools.forEach((t: any) => {
+              const g1 = sem1Grades.find((r: any) => r.category.trim() === t.name.trim());
+              if (g1) s1Total += (Number(g1.score) || 0);
+              
+              const g2 = sem2Grades.find((r: any) => r.category.trim() === t.name.trim());
+              if (g2) s2Total += (Number(g2.score) || 0);
+          });
+
+          const fAvg = (s1Total + s2Total) / 2;
+
+          stats.sem1[getCat(s1Total)]++;
+          stats.sem1.totalScore += s1Total;
+
+          stats.sem2[getCat(s2Total)]++;
+          stats.sem2.totalScore += s2Total;
+
+          stats.final[getCat(fAvg)]++;
+          stats.final.totalScore += fAvg;
+
+          if (fAvg > stats.topStudent.score) {
+              stats.topStudent = { name: student.name, score: fAvg };
+          }
+      });
+
+      return stats;
+  }, [safeStudents, analyticsClass, assessmentTools]);
+
+  const renderProgressBar = (count: number, total: number, colorClass: string, label: string) => {
+      const percentage = total > 0 ? Math.round((count / total) * 100) : 0;
+      return (
+          <div className="mb-3">
+              <div className="flex justify-between text-xs font-bold mb-1">
+                  <span className="text-textPrimary">{label}</span>
+                  <span className="text-textSecondary">{count} طالب ({percentage}%)</span>
+              </div>
+              <div className="w-full bg-bgSoft rounded-full h-3 overflow-hidden border border-borderColor">
+                  <div className={`h-full ${colorClass} transition-all duration-1000 ease-out`} style={{ width: `${percentage}%` }}></div>
+              </div>
+          </div>
+      );
+  };
+  // ==============================================================================
+
   if (viewingStudent) {
     return (
       <StudentReport
@@ -1139,6 +1237,7 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
     { id: 'certificates', label: t('certificatesTab'), icon: Icon3DCertificate },
     { id: 'parent_cards', label: t('parentCardsTab'), icon: Icon3DParentCard }, 
     { id: 'summon', label: t('summonTab'), icon: Icon3DSummon },
+    { id: 'analytics', label: t('analyticsTab') || 'الإحصائيات', icon: Icon3DAnalytics }, // 💉 إضافة التبويب الجديد
   ];
 
   return (
@@ -1451,6 +1550,102 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
                   <Icon3DEye className="w-5 h-5" /> {t('previewLetter')}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* 💉 التبويب الجديد: الإحصائيات (Analytics) */}
+          {activeTab === 'analytics' && (
+            <div className="space-y-6 animate-in fade-in duration-500">
+              <div className="flex items-center gap-3 border-b pb-4 mb-2 border-borderColor">
+                <div className="p-2 rounded-xl bg-indigo-100 text-indigo-600"><Icon3DAnalytics className="w-5 h-5" /></div>
+                <h3 className="font-black text-lg text-textPrimary">التحليل الإحصائي للنتائج</h3>
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
+                  {availableGrades.map(g => (
+                    <button
+                      key={g}
+                      onClick={() => { setAnalyticsGrade(g); setAnalyticsClass('all'); }}
+                      className={`px-4 py-2 text-xs font-bold rounded-xl border transition-all ${analyticsGrade === g ? 'bg-indigo-600 text-white border-indigo-600 backdrop-blur-sm' : 'bg-bgSoft text-textSecondary border-borderColor hover:bg-bgCard backdrop-blur-sm'}`}
+                    >
+                      {t('gradePrefix')} {g}
+                    </button>
+                  ))}
+                </div>
+
+                <select value={analyticsClass} onChange={(e) => setAnalyticsClass(e.target.value)} className="w-full p-4 border rounded-2xl font-bold outline-none transition-colors text-sm bg-bgCard border-borderColor text-textPrimary focus:border-indigo-600 backdrop-blur-md">
+                  <option value="all" className="bg-bgCard text-textPrimary">{t('allClassesInGrade').split(' ')[0]}</option>
+                  {getClassesForGrade(analyticsGrade).map(c => <option key={c} value={c} className="bg-bgCard text-textPrimary">{c}</option>)}
+                </select>
+              </div>
+
+              {analyticsData.totalStudents > 0 ? (
+                  <>
+                      {/* لوحة المعلومات السريعة */}
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-2">
+                          <div className="bg-bgSoft border border-borderColor p-4 rounded-2xl text-center">
+                              <p className="text-[10px] font-bold text-textSecondary mb-1">إجمالي الطلاب</p>
+                              <p className="text-2xl font-black text-indigo-600">{analyticsData.totalStudents}</p>
+                          </div>
+                          <div className="bg-bgSoft border border-borderColor p-4 rounded-2xl text-center">
+                              <p className="text-[10px] font-bold text-textSecondary mb-1">متوسط الفصل 1</p>
+                              <p className="text-xl font-black text-textPrimary">{Math.round(analyticsData.sem1.totalScore / analyticsData.totalStudents)}</p>
+                          </div>
+                          <div className="bg-bgSoft border border-borderColor p-4 rounded-2xl text-center">
+                              <p className="text-[10px] font-bold text-textSecondary mb-1">متوسط الفصل 2</p>
+                              <p className="text-xl font-black text-textPrimary">{Math.round(analyticsData.sem2.totalScore / analyticsData.totalStudents)}</p>
+                          </div>
+                          <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl text-center">
+                              <p className="text-[10px] font-bold text-amber-700 mb-1">الأول على الصف</p>
+                              <p className="text-sm font-black text-amber-900 truncate">{analyticsData.topStudent.name}</p>
+                          </div>
+                      </div>
+
+                      {/* الرسومات البيانية */}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
+                          
+                          {/* الفصل الدراسي الأول */}
+                          <div className="border border-borderColor bg-bgCard p-5 rounded-2xl shadow-sm">
+                              <h4 className="font-black text-sm text-center mb-6 text-textPrimary">نتائج الفصل الأول</h4>
+                              {renderProgressBar(analyticsData.sem1.A, analyticsData.totalStudents, 'bg-emerald-500', 'أ (ممتاز)')}
+                              {renderProgressBar(analyticsData.sem1.B, analyticsData.totalStudents, 'bg-blue-500', 'ب (جيد جداً)')}
+                              {renderProgressBar(analyticsData.sem1.C, analyticsData.totalStudents, 'bg-yellow-400', 'ج (جيد)')}
+                              {renderProgressBar(analyticsData.sem1.D, analyticsData.totalStudents, 'bg-orange-400', 'د (مقبول)')}
+                              {renderProgressBar(analyticsData.sem1.F, analyticsData.totalStudents, 'bg-rose-500', 'هـ (ضعيف)')}
+                          </div>
+
+                          {/* الفصل الدراسي الثاني */}
+                          <div className="border border-borderColor bg-bgCard p-5 rounded-2xl shadow-sm">
+                              <h4 className="font-black text-sm text-center mb-6 text-textPrimary">نتائج الفصل الثاني</h4>
+                              {renderProgressBar(analyticsData.sem2.A, analyticsData.totalStudents, 'bg-emerald-500', 'أ (ممتاز)')}
+                              {renderProgressBar(analyticsData.sem2.B, analyticsData.totalStudents, 'bg-blue-500', 'ب (جيد جداً)')}
+                              {renderProgressBar(analyticsData.sem2.C, analyticsData.totalStudents, 'bg-yellow-400', 'ج (جيد)')}
+                              {renderProgressBar(analyticsData.sem2.D, analyticsData.totalStudents, 'bg-orange-400', 'د (مقبول)')}
+                              {renderProgressBar(analyticsData.sem2.F, analyticsData.totalStudents, 'bg-rose-500', 'هـ (ضعيف)')}
+                          </div>
+
+                          {/* النتيجة النهائية */}
+                          <div className="border-2 border-indigo-100 bg-indigo-50/50 p-5 rounded-2xl shadow-sm">
+                              <h4 className="font-black text-sm text-center mb-6 text-indigo-900 flex items-center justify-center gap-2">
+                                  <TrendingUp className="w-4 h-4" /> النتيجة العامة النهائية
+                              </h4>
+                              {renderProgressBar(analyticsData.final.A, analyticsData.totalStudents, 'bg-emerald-500', 'أ (ممتاز)')}
+                              {renderProgressBar(analyticsData.final.B, analyticsData.totalStudents, 'bg-blue-500', 'ب (جيد جداً)')}
+                              {renderProgressBar(analyticsData.final.C, analyticsData.totalStudents, 'bg-yellow-400', 'ج (جيد)')}
+                              {renderProgressBar(analyticsData.final.D, analyticsData.totalStudents, 'bg-orange-400', 'د (مقبول)')}
+                              {renderProgressBar(analyticsData.final.F, analyticsData.totalStudents, 'bg-rose-500', 'هـ (ضعيف)')}
+                          </div>
+
+                      </div>
+                  </>
+              ) : (
+                  <div className="flex flex-col items-center justify-center py-20 opacity-60">
+                      <Icon3DAnalytics className="w-16 h-16 grayscale opacity-50 mb-4" />
+                      <p className="text-textSecondary font-bold">لا يوجد طلاب مطابقين لعرض الإحصائيات</p>
+                  </div>
+              )}
+
             </div>
           )}
 
