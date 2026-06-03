@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { ArrowRight, Check, Loader2, Award, TrendingUp, Users } from 'lucide-react';
+import { ArrowRight, Check, Loader2, Award, TrendingUp, Users, FileText } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { Student } from '../types';
 import StudentReport from './StudentReport';
