@@ -333,6 +333,7 @@ const AnalyticsTemplate = ({ data, teacherInfo, targetClass }: any) => {
     const { t, dir, language } = useApp();
     const date = new Date().toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US');
 
+    // 💉 تصحيح اسم الدالة لتطابق استخدامها في القالب
     const renderBar = (count: number, total: number, color: string, label: string) => {
         const pct = total > 0 ? Math.round((count / total) * 100) : 0;
         return (
@@ -348,7 +349,6 @@ const AnalyticsTemplate = ({ data, teacherInfo, targetClass }: any) => {
         );
     };
 
-    // مصفوفة الفصول المتعددة للطباعة
     const reportSections = [
         { id: 'sem1', title: 'تفصيل نتائج الفصل الدراسي الأول', dataObj: data.sem1, isFinal: false },
         { id: 'sem2', title: 'تفصيل نتائج الفصل الدراسي الثاني', dataObj: data.sem2, isFinal: false },
@@ -1792,19 +1792,19 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
                           <div className="border border-borderColor bg-bgCard p-5 rounded-2xl shadow-sm">
                               <h4 className="font-black text-sm text-center mb-6 text-textPrimary">نتائج الفصل الأول</h4>
-                              {GRADE_CATEGORIES.map(c => renderBar(analyticsData.sem1[c.key as keyof typeof analyticsData.sem1].length, analyticsData.totalStudents, c.bar, c.label))}
+                              {GRADE_CATEGORIES.map(c => renderProgressBar(analyticsData.sem1[c.key as keyof typeof analyticsData.sem1].length, analyticsData.totalStudents, c.bar, c.label))}
                           </div>
 
                           <div className="border border-borderColor bg-bgCard p-5 rounded-2xl shadow-sm">
                               <h4 className="font-black text-sm text-center mb-6 text-textPrimary">نتائج الفصل الثاني</h4>
-                              {GRADE_CATEGORIES.map(c => renderBar(analyticsData.sem2[c.key as keyof typeof analyticsData.sem2].length, analyticsData.totalStudents, c.bar, c.label))}
+                              {GRADE_CATEGORIES.map(c => renderProgressBar(analyticsData.sem2[c.key as keyof typeof analyticsData.sem2].length, analyticsData.totalStudents, c.bar, c.label))}
                           </div>
 
                           <div className="border-2 border-indigo-100 bg-indigo-50/50 p-5 rounded-2xl shadow-sm">
                               <h4 className="font-black text-sm text-center mb-6 text-indigo-900 flex items-center justify-center gap-2">
                                   <TrendingUp className="w-4 h-4" /> النتيجة العامة النهائية
                               </h4>
-                              {GRADE_CATEGORIES.map(c => renderBar(analyticsData.final[c.key as keyof typeof analyticsData.final].length, analyticsData.totalStudents, c.bar, c.label))}
+                              {GRADE_CATEGORIES.map(c => renderProgressBar(analyticsData.final[c.key as keyof typeof analyticsData.final].length, analyticsData.totalStudents, c.bar, c.label))}
                           </div>
                       </div>
 
