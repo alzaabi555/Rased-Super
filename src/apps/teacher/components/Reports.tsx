@@ -173,7 +173,6 @@ const Icon3DEye = ({ className }: { className?: string }) => (
   </svg>
 );
 
-// 💉 أيقونة للإحصائيات
 const Icon3DAnalytics = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 100 100" className={className || "w-6 h-6"} xmlns="http://www.w3.org/2000/svg">
     <defs>
@@ -317,6 +316,152 @@ const PrintPreviewModal: React.FC<{
 // =================================================================================
 // ✅ القوالب المحدثة (للتباعة)
 // =================================================================================
+
+// 💉 قالب طباعة الإحصائيات (جديد)
+const AnalyticsTemplate = ({ data, teacherInfo, targetClass }: any) => {
+    const { t, dir, language } = useApp();
+    const date = new Date().toLocaleDateString(language === 'ar' ? 'ar-EG' : 'en-US');
+
+    const renderBar = (count: number, total: number, color: string, label: string) => {
+        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+        return (
+            <div className="mb-2 text-[10px]">
+                <div className="flex justify-between font-bold mb-1">
+                    <span>{label}</span>
+                    <span>{count} طالب ({pct}%)</span>
+                </div>
+                <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden">
+                    <div className={`h-full ${color}`} style={{ width: `${pct}%` }}></div>
+                </div>
+            </div>
+        );
+    };
+
+    const cats = [
+        { key: 'A', label: 'أ (ممتاز)', color: 'bg-emerald-100', bar: 'bg-emerald-500' },
+        { key: 'B', label: 'ب (جيد جداً)', color: 'bg-blue-100', bar: 'bg-blue-500' },
+        { key: 'C', label: 'ج (جيد)', color: 'bg-yellow-100', bar: 'bg-yellow-400' },
+        { key: 'D', label: 'د (مقبول)', color: 'bg-orange-100', bar: 'bg-orange-400' },
+        { key: 'F', label: 'هـ (ضعيف)', color: 'bg-rose-100', bar: 'bg-rose-500' },
+    ];
+
+    return (
+        <div className="w-full text-black bg-white p-8" dir={dir}>
+            {/* Header */}
+            <div className="text-center mb-6 border-b-2 border-black pb-4">
+              <div className="flex justify-between items-center mb-4">
+                <div className={`text-${dir === 'rtl' ? 'right' : 'left'} text-sm font-bold leading-relaxed`}>
+                  <p>{t('sultanateOfOman')}</p>
+                  <p>{t('ministryOfEducation')}</p>
+                  <p>{t('schoolWord')} {teacherInfo?.school}</p>
+                </div>
+                <div className="text-center">
+                    {teacherInfo?.ministryLogo && <img src={teacherInfo.ministryLogo} className="h-14 object-contain mx-auto mb-2" />}
+                    <h1 className="text-xl font-black underline text-black">التقرير الإحصائي الشامل للنتائج</h1>
+                </div>
+                <div className={`text-${dir === 'rtl' ? 'left' : 'right'} text-sm font-bold leading-relaxed`}>
+                  <p>المادة: {teacherInfo?.subject || '........'}</p>
+                  <p>الصف: {targetClass === 'all' ? 'جميع الصفوف المحددة' : targetClass}</p>
+                  <p>التاريخ: {date}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="flex justify-between gap-4 mb-6 text-center">
+                <div className="flex-1 border-2 border-black p-2 rounded-lg bg-gray-50">
+                    <p className="text-[10px] font-bold">إجمالي الطلاب</p>
+                    <p className="font-black text-lg">{data.totalStudents}</p>
+                </div>
+                <div className="flex-1 border-2 border-black p-2 rounded-lg bg-gray-50">
+                    <p className="text-[10px] font-bold">متوسط ف1</p>
+                    <p className="font-black text-lg">{Math.round(data.sem1.totalScore / data.totalStudents) || 0}</p>
+                </div>
+                <div className="flex-1 border-2 border-black p-2 rounded-lg bg-gray-50">
+                    <p className="text-[10px] font-bold">متوسط ف2</p>
+                    <p className="font-black text-lg">{Math.round(data.sem2.totalScore / data.totalStudents) || 0}</p>
+                </div>
+                <div className="flex-1 border-2 border-black p-2 rounded-lg bg-amber-50">
+                    <p className="text-[10px] font-bold text-amber-800">الأول على الصف</p>
+                    <p className="font-black text-sm text-amber-900 truncate">{data.topStudent.name}</p>
+                </div>
+            </div>
+
+            {/* Visual Chart Row */}
+            <div className="flex gap-4 mb-8">
+                <div className="flex-1 border border-black p-3 rounded-xl">
+                    <h4 className="font-bold text-[10px] text-center mb-3">نسب نتائج الفصل الأول</h4>
+                    {cats.map(c => renderBar(data.sem1[c.key as keyof typeof data.sem1].length, data.totalStudents, c.bar, c.label))}
+                </div>
+                <div className="flex-1 border border-black p-3 rounded-xl">
+                    <h4 className="font-bold text-[10px] text-center mb-3">نسب نتائج الفصل الثاني</h4>
+                    {cats.map(c => renderBar(data.sem2[c.key as keyof typeof data.sem2].length, data.totalStudents, c.bar, c.label))}
+                </div>
+                <div className="flex-1 border-2 border-black p-3 rounded-xl bg-indigo-50/30">
+                    <h4 className="font-black text-xs text-center mb-3">النتيجة العامة النهائية</h4>
+                    {cats.map(c => renderBar(data.final[c.key as keyof typeof data.final].length, data.totalStudents, c.bar, c.label))}
+                </div>
+            </div>
+
+            {/* Detailed Tables */}
+            <h3 className="font-black text-sm mb-4 border-b-2 border-black inline-block">تفصيل أسماء الطلاب حسب النتيجة النهائية:</h3>
+            
+            {cats.map(cat => {
+                const studentsList = data.final[cat.key as keyof typeof data.final] as any[];
+                if (studentsList.length === 0) return null;
+                return (
+                    <div key={cat.key} className="mb-6 html2pdf__page-break-avoid" style={{ pageBreakInside: 'avoid' }}>
+                        <div className={`border border-black border-b-0 p-2 font-bold text-xs ${cat.color} flex justify-between`}>
+                            <span>الطلاب الحاصلون على تقدير: {cat.label}</span>
+                            <span>العدد: {studentsList.length} طلاب</span>
+                        </div>
+                        <table className="w-full border-collapse border border-black text-[10px]">
+                            <thead>
+                                <tr className="bg-gray-100">
+                                    <th className="border border-black p-1.5 w-8 text-center">م</th>
+                                    <th className={`border border-black p-1.5 text-${dir === 'rtl' ? 'right' : 'left'}`}>اسم الطالب</th>
+                                    <th className="border border-black p-1.5 w-20 text-center">مجموع ف1</th>
+                                    <th className="border border-black p-1.5 w-20 text-center">مجموع ف2</th>
+                                    <th className="border border-black p-1.5 w-24 text-center font-bold">المعدل النهائي</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {[...studentsList].sort((a, b) => b.final - a.final).map((s, idx) => (
+                                    <tr key={idx}>
+                                        <td className="border border-black p-1.5 text-center">{idx + 1}</td>
+                                        <td className={`border border-black p-1.5 font-bold text-${dir === 'rtl' ? 'right' : 'left'}`}>{s.name}</td>
+                                        <td className="border border-black p-1.5 text-center">{s.sem1}</td>
+                                        <td className="border border-black p-1.5 text-center">{s.sem2}</td>
+                                        <td className="border border-black p-1.5 text-center font-black">{s.final}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                );
+            })}
+
+            {/* Signatures */}
+            <div className="flex justify-between items-end pt-8 mt-8 border-t-2 border-black relative">
+                <div className="text-center w-1/3">
+                    <p className="font-bold text-xs mb-6">معلم المادة</p>
+                    <p className="font-black text-sm">{teacherInfo?.name || '....................'}</p>
+                </div>
+                {teacherInfo?.stamp && (
+                    <div className="absolute left-1/2 bottom-0 transform -translate-x-1/2 w-24 opacity-80 mix-blend-multiply">
+                        <img src={teacherInfo.stamp} className="w-full object-contain" alt="Stamp" />
+                    </div>
+                )}
+                <div className="text-center w-1/3">
+                    <p className="font-bold text-xs mb-6">مدير المدرسة</p>
+                    <p className="font-black text-sm">....................</p>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ... القوالب القديمة باقية كما هي دون أي تغيير ...
 
 const GradesTemplate = ({ students, tools, teacherInfo, semester, gradeClass }: any) => {
   const { t, dir } = useApp();
@@ -997,7 +1142,6 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
   const [cardsGrade, setCardsGrade] = useState<string>('all');
   const [cardsClass, setCardsClass] = useState<string>('all');
 
-  // 💉 حالة قسم الإحصائيات الجديد
   const [analyticsGrade, setAnalyticsGrade] = useState<string>('all');
   const [analyticsClass, setAnalyticsClass] = useState<string>('all');
 
@@ -1129,6 +1273,17 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
     });
   };
 
+  // 💉 فتح نافذة الطباعة الخاصة بالإحصائيات
+  const openAnalyticsPreview = () => {
+      if (analyticsData.totalStudents === 0) return alert('لا يوجد طلاب مطابقين لعرض وطباعة الإحصائيات');
+      setPreviewData({
+          isOpen: true,
+          title: 'التقرير الإحصائي الشامل للنتائج',
+          landscape: false,
+          content: <AnalyticsTemplate data={analyticsData} teacherInfo={teacherInfo} targetClass={analyticsClass} />
+      });
+  };
+
   const selectAllCertStudents = () => {
     if (selectedCertStudents.length === filteredStudentsForCert.length) {
       setSelectedCertStudents([]);
@@ -1141,17 +1296,15 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
     setSelectedCertStudents(prev => prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]);
   };
 
-  // ==============================================================================
-  // 💉 محرك الإحصائيات (الحسابات الذكية لمعالجة بيانات الصف بأكمله)
-  // ==============================================================================
+  // 💉 محرك الإحصائيات المحدث (تخزين بيانات الطلاب للتفاصيل والطباعة)
   const analyticsData = useMemo(() => {
       const targetStudents = safeStudents.filter(s => analyticsClass === 'all' || (Array.isArray(s?.classes) && s.classes.includes(analyticsClass)));
       
       const stats = {
           totalStudents: targetStudents.length,
-          sem1: { A: 0, B: 0, C: 0, D: 0, F: 0, totalScore: 0 },
-          sem2: { A: 0, B: 0, C: 0, D: 0, F: 0, totalScore: 0 },
-          final: { A: 0, B: 0, C: 0, D: 0, F: 0, totalScore: 0 },
+          sem1: { A: [], B: [], C: [], D: [], F: [], totalScore: 0 },
+          sem2: { A: [], B: [], C: [], D: [], F: [], totalScore: 0 },
+          final: { A: [], B: [], C: [], D: [], F: [], totalScore: 0 },
           topStudent: { name: '-', score: 0 }
       };
 
@@ -1186,13 +1339,18 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
 
           const fAvg = (s1Total + s2Total) / 2;
 
-          stats.sem1[getCat(s1Total)]++;
+          stats.sem1[getCat(s1Total) as keyof typeof stats.sem1].push({ name: student.name, score: s1Total } as never);
           stats.sem1.totalScore += s1Total;
 
-          stats.sem2[getCat(s2Total)]++;
+          stats.sem2[getCat(s2Total) as keyof typeof stats.sem2].push({ name: student.name, score: s2Total } as never);
           stats.sem2.totalScore += s2Total;
 
-          stats.final[getCat(fAvg)]++;
+          stats.final[getCat(fAvg) as keyof typeof stats.final].push({
+              name: student.name,
+              sem1: s1Total,
+              sem2: s2Total,
+              final: fAvg
+          } as never);
           stats.final.totalScore += fAvg;
 
           if (fAvg > stats.topStudent.score) {
@@ -1217,7 +1375,6 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
           </div>
       );
   };
-  // ==============================================================================
 
   if (viewingStudent) {
     return (
@@ -1237,7 +1394,7 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
     { id: 'certificates', label: t('certificatesTab'), icon: Icon3DCertificate },
     { id: 'parent_cards', label: t('parentCardsTab'), icon: Icon3DParentCard }, 
     { id: 'summon', label: t('summonTab'), icon: Icon3DSummon },
-    { id: 'analytics', label: t('analyticsTab') || 'الإحصائيات', icon: Icon3DAnalytics }, // 💉 إضافة التبويب الجديد
+    { id: 'analytics', label: t('analyticsTab') || 'التحليل الإحصائي', icon: Icon3DAnalytics },
   ];
 
   return (
@@ -1553,7 +1710,6 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
             </div>
           )}
 
-          {/* 💉 التبويب الجديد: الإحصائيات (Analytics) */}
           {activeTab === 'analytics' && (
             <div className="space-y-6 animate-in fade-in duration-500">
               <div className="flex items-center gap-3 border-b pb-4 mb-2 border-borderColor">
@@ -1605,38 +1761,42 @@ const Reports: React.FC<ReportsProps> = ({ initialTab }) => {
                       {/* الرسومات البيانية */}
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4">
                           
-                          {/* الفصل الدراسي الأول */}
                           <div className="border border-borderColor bg-bgCard p-5 rounded-2xl shadow-sm">
                               <h4 className="font-black text-sm text-center mb-6 text-textPrimary">نتائج الفصل الأول</h4>
-                              {renderProgressBar(analyticsData.sem1.A, analyticsData.totalStudents, 'bg-emerald-500', 'أ (ممتاز)')}
-                              {renderProgressBar(analyticsData.sem1.B, analyticsData.totalStudents, 'bg-blue-500', 'ب (جيد جداً)')}
-                              {renderProgressBar(analyticsData.sem1.C, analyticsData.totalStudents, 'bg-yellow-400', 'ج (جيد)')}
-                              {renderProgressBar(analyticsData.sem1.D, analyticsData.totalStudents, 'bg-orange-400', 'د (مقبول)')}
-                              {renderProgressBar(analyticsData.sem1.F, analyticsData.totalStudents, 'bg-rose-500', 'هـ (ضعيف)')}
+                              {renderProgressBar(analyticsData.sem1.A.length, analyticsData.totalStudents, 'bg-emerald-500', 'أ (ممتاز)')}
+                              {renderProgressBar(analyticsData.sem1.B.length, analyticsData.totalStudents, 'bg-blue-500', 'ب (جيد جداً)')}
+                              {renderProgressBar(analyticsData.sem1.C.length, analyticsData.totalStudents, 'bg-yellow-400', 'ج (جيد)')}
+                              {renderProgressBar(analyticsData.sem1.D.length, analyticsData.totalStudents, 'bg-orange-400', 'د (مقبول)')}
+                              {renderProgressBar(analyticsData.sem1.F.length, analyticsData.totalStudents, 'bg-rose-500', 'هـ (ضعيف)')}
                           </div>
 
-                          {/* الفصل الدراسي الثاني */}
                           <div className="border border-borderColor bg-bgCard p-5 rounded-2xl shadow-sm">
                               <h4 className="font-black text-sm text-center mb-6 text-textPrimary">نتائج الفصل الثاني</h4>
-                              {renderProgressBar(analyticsData.sem2.A, analyticsData.totalStudents, 'bg-emerald-500', 'أ (ممتاز)')}
-                              {renderProgressBar(analyticsData.sem2.B, analyticsData.totalStudents, 'bg-blue-500', 'ب (جيد جداً)')}
-                              {renderProgressBar(analyticsData.sem2.C, analyticsData.totalStudents, 'bg-yellow-400', 'ج (جيد)')}
-                              {renderProgressBar(analyticsData.sem2.D, analyticsData.totalStudents, 'bg-orange-400', 'د (مقبول)')}
-                              {renderProgressBar(analyticsData.sem2.F, analyticsData.totalStudents, 'bg-rose-500', 'هـ (ضعيف)')}
+                              {renderProgressBar(analyticsData.sem2.A.length, analyticsData.totalStudents, 'bg-emerald-500', 'أ (ممتاز)')}
+                              {renderProgressBar(analyticsData.sem2.B.length, analyticsData.totalStudents, 'bg-blue-500', 'ب (جيد جداً)')}
+                              {renderProgressBar(analyticsData.sem2.C.length, analyticsData.totalStudents, 'bg-yellow-400', 'ج (جيد)')}
+                              {renderProgressBar(analyticsData.sem2.D.length, analyticsData.totalStudents, 'bg-orange-400', 'د (مقبول)')}
+                              {renderProgressBar(analyticsData.sem2.F.length, analyticsData.totalStudents, 'bg-rose-500', 'هـ (ضعيف)')}
                           </div>
 
-                          {/* النتيجة النهائية */}
                           <div className="border-2 border-indigo-100 bg-indigo-50/50 p-5 rounded-2xl shadow-sm">
                               <h4 className="font-black text-sm text-center mb-6 text-indigo-900 flex items-center justify-center gap-2">
                                   <TrendingUp className="w-4 h-4" /> النتيجة العامة النهائية
                               </h4>
-                              {renderProgressBar(analyticsData.final.A, analyticsData.totalStudents, 'bg-emerald-500', 'أ (ممتاز)')}
-                              {renderProgressBar(analyticsData.final.B, analyticsData.totalStudents, 'bg-blue-500', 'ب (جيد جداً)')}
-                              {renderProgressBar(analyticsData.final.C, analyticsData.totalStudents, 'bg-yellow-400', 'ج (جيد)')}
-                              {renderProgressBar(analyticsData.final.D, analyticsData.totalStudents, 'bg-orange-400', 'د (مقبول)')}
-                              {renderProgressBar(analyticsData.final.F, analyticsData.totalStudents, 'bg-rose-500', 'هـ (ضعيف)')}
+                              {renderProgressBar(analyticsData.final.A.length, analyticsData.totalStudents, 'bg-emerald-500', 'أ (ممتاز)')}
+                              {renderProgressBar(analyticsData.final.B.length, analyticsData.totalStudents, 'bg-blue-500', 'ب (جيد جداً)')}
+                              {renderProgressBar(analyticsData.final.C.length, analyticsData.totalStudents, 'bg-yellow-400', 'ج (جيد)')}
+                              {renderProgressBar(analyticsData.final.D.length, analyticsData.totalStudents, 'bg-orange-400', 'د (مقبول)')}
+                              {renderProgressBar(analyticsData.final.F.length, analyticsData.totalStudents, 'bg-rose-500', 'هـ (ضعيف)')}
                           </div>
 
+                      </div>
+
+                      {/* 💉 زر طباعة التقرير الإحصائي الجديد */}
+                      <div className="flex justify-end pt-4 mt-6 border-t border-borderColor">
+                          <button onClick={openAnalyticsPreview} className="w-full text-white px-6 py-4 rounded-xl font-black text-xs flex items-center justify-center gap-2 shadow-lg active:scale-95 transition-all bg-indigo-600 hover:bg-indigo-700">
+                              <Icon3DPrint className="w-5 h-5" /> طباعة التقرير الإحصائي التفصيلي
+                          </button>
                       </div>
                   </>
               ) : (
