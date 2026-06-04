@@ -11,66 +11,60 @@ const VoiceAssistant: React.FC = () => {
   const [feedback, setFeedback] = useState<{ message: string; type: 'info' | 'success' | 'error' | null }>({ message: '', type: null });
   
   const recognitionRef = useRef<any>(null);
-  // 💉 استخدام Ref منفصل لتحديث النص فورياً والهروب من بطء React
   const latestTextRef = useRef<string>(''); 
 
-  // 🗣️ محرك النطق (Text-to-Speech)
+  // 🗣️ محرك النطق
   const speak = (text: string) => {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'ar-SA'; // نطق عربي
-      utterance.rate = 1.1; // سرعة التحدث
+      utterance.lang = 'ar-SA';
+      utterance.rate = 1.1;
       window.speechSynthesis.speak(utterance);
     }
   };
 
-  // 🧠 محرك تحليل الأوامر (الذكاء الاصطناعي المصغر)
+  // 🧠 محرك تحليل الأوامر
   const processCommand = (command: string) => {
     if (!command.trim()) return;
     const text = command.trim();
     
-    // 1. أوامر التنقل
     if (text.includes('تقارير') || text.includes('إحصائيات') || text.includes('احصائيات')) {
       setFeedback({ message: 'جاري فتح مركز التقارير...', type: 'success' });
       speak('حاضر، جاري فتح مركز التقارير والإحصائيات');
       return;
     }
 
-    // 2. أوامر الغياب (أمثلة تجريبية)
     if (text.includes('غائب') || text.includes('غياب')) {
       setFeedback({ message: 'تم رصد الغياب بنجاح', type: 'success' });
       speak('تم تسجيل الطالب غائباً في النظام');
       return;
     }
 
-    // 3. أوامر التعزيز
     if (text.includes('نجمة') || text.includes('ممتاز') || text.includes('مشاركة')) {
       setFeedback({ message: 'تم إضافة نقطة تعزيز', type: 'success' });
       speak('تم إضافة نقطة إيجابية للطالب');
       return;
     }
 
-    // أمر غير معروف
     setFeedback({ message: `لم أتعرف على الأمر: "${text}"`, type: 'error' });
     speak('عذراً، لم أفهم الأمر جيداً، هل يمكنك الإعادة؟');
   };
 
-  // ⚙️ تهيئة المايكروفون
   useEffect(() => {
     if (!SpeechRecognition) {
-      setFeedback({ message: 'المتصفح لا يدعم الأوامر الصوتية', type: 'error' });
+      setFeedback({ message: 'المتصفح أو الجوال لا يدعم الأوامر الصوتية', type: 'error' });
       return;
     }
 
     const recognition = new SpeechRecognition();
-    recognition.continuous = false; // التوقف بعد انتهاء الجملة
-    recognition.interimResults = true; // إظهار النص أثناء التحدث
-    recognition.lang = 'ar-OM'; // اللهجة العمانية/العربية
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.lang = 'ar-OM'; 
 
     recognition.onstart = () => {
       setIsListening(true);
       setTranscript('');
-      latestTextRef.current = ''; // تصفير النص الفوري
+      latestTextRef.current = ''; 
       setFeedback({ message: 'راصد يستمع إليك...', type: 'info' });
     };
 
@@ -80,48 +74,60 @@ const VoiceAssistant: React.FC = () => {
         currentTranscript += event.results[i][0].transcript;
       }
       setTranscript(currentTranscript);
-      latestTextRef.current = currentTranscript; // 💉 حفظ فوري بدون تأخير
+      latestTextRef.current = currentTranscript; 
     };
 
     recognition.onend = () => {
       setIsListening(false);
       const finalText = latestTextRef.current;
       
-      // معالجة النص النهائي الفوري بعد سكوت المعلم
       if (finalText) {
         processCommand(finalText);
       } else {
-        setFeedback({ message: 'تم إيقاف المايكروفون (لم أسمع صوتاً)', type: null });
+        setFeedback({ message: 'تم إيقاف المايكروفون', type: null });
       }
     };
 
     recognition.onerror = (event: any) => {
       setIsListening(false);
-      setFeedback({ message: `حدث خطأ: ${event.error}`, type: 'error' });
+      // معالجة خطأ الرفض الأمني في الجوالات
+      if (event.error === 'not-allowed') {
+         setFeedback({ message: 'الرجاء السماح للتطبيق باستخدام المايكروفون من إعدادات الهاتف', type: 'error' });
+      } else {
+         setFeedback({ message: `حدث خطأ: ${event.error}`, type: 'error' });
+      }
     };
 
     recognitionRef.current = recognition;
   }, []);
 
-  const toggleListening = useCallback(() => {
+  // 💉 الجراحة الأمنية: إجبار الجوال على إظهار رسالة (هل تسمح للتطبيق باستخدام المايكروفون؟)
+  const toggleListening = useCallback(async () => {
     if (isListening) {
       recognitionRef.current?.stop();
     } else {
       try {
+        // نطلب إذن المايكروفون بشكل صريح أولاً (هذا يفتح نافذة الموافقة في الجوالات)
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+           // بمجرد الموافقة، نغلق هذا المسار لأننا نريد تشغيل مسار الذكاء الاصطناعي بدلاً منه
+           stream.getTracks().forEach(track => track.stop());
+        }
+        
+        // الآن بعد أخذ الإذن، نشغل محرك الاستماع الذكي
         recognitionRef.current?.start();
       } catch (e) {
-        console.error(e);
+        console.error("Microphone permission denied", e);
+        setFeedback({ message: 'عذراً، يجب إعطاء الإذن لاستخدام المايكروفون أولاً!', type: 'error' });
       }
     }
   }, [isListening]);
 
-  // إذا لم يكن المتصفح يدعم التقنية، لا نظهر المكون
   if (!SpeechRecognition) return null;
 
   return (
     <div className={`fixed bottom-6 ${dir === 'rtl' ? 'left-6' : 'right-6'} z-[99999] flex flex-col items-${dir === 'rtl' ? 'start' : 'end'} pointer-events-none`} dir={dir}>
       
-      {/* 💬 فقاعة المحادثة (تظهر فقط عند الاستماع أو وجود رد) */}
       {(isListening || transcript || feedback.message) && (
         <div className="mb-4 bg-white/95 backdrop-blur-xl border border-gray-200 shadow-2xl rounded-2xl p-4 max-w-sm pointer-events-auto animate-in slide-in-from-bottom-2 fade-in">
           <div className="flex items-center gap-2 mb-2">
@@ -150,7 +156,6 @@ const VoiceAssistant: React.FC = () => {
         </div>
       )}
 
-      {/* 🎙️ زر المايكروفون العائم (FAB) */}
       <button
         onClick={toggleListening}
         className={`pointer-events-auto flex items-center justify-center w-16 h-16 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.12)] transition-all duration-300 active:scale-90 ${
