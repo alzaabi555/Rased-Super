@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Mic, MicOff, Loader2, Volume2, CheckCircle, XCircle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { Student } from '../types';
+
+interface VoiceAssistantProps {
+  onNavigate?: (tab: string) => void;
+}
 
 const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
-const VoiceAssistant: React.FC = () => {
-  const { t, dir } = useApp();
+const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
+  // 💉 جلبنا الطلاب ودالة التحديث من السياق
+  const { t, dir, students, setStudents } = useApp(); 
+  
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [feedback, setFeedback] = useState<{ message: string; type: 'info' | 'success' | 'error' | null }>({ message: '', type: null });
@@ -13,7 +20,6 @@ const VoiceAssistant: React.FC = () => {
   const recognitionRef = useRef<any>(null);
   const latestTextRef = useRef<string>(''); 
 
-  // 🗣️ محرك النطق
   const speak = (text: string) => {
     if ('speechSynthesis' in window) {
       const utterance = new SpeechSynthesisUtterance(text);
@@ -23,30 +29,87 @@ const VoiceAssistant: React.FC = () => {
     }
   };
 
-  // 🧠 محرك تحليل الأوامر
+  // 💉 دالة لتطبيع الحروف العربية (لكي يفهم الذكاء الاصطناعي الأسماء رغم اختلاف النطق)
+  const normalizeText = (text: string) => {
+    return text.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+  };
+
   const processCommand = (command: string) => {
     if (!command.trim()) return;
-    const text = command.trim();
+    const text = normalizeText(command.trim());
     
-    if (text.includes('تقارير') || text.includes('إحصائيات') || text.includes('احصائيات')) {
+    // ==========================================
+    // 1️⃣ أوامر التنقل بين الشاشات
+    // ==========================================
+    if (text.includes('تقارير') || text.includes('احصائيات')) {
       setFeedback({ message: 'جاري فتح مركز التقارير...', type: 'success' });
       speak('حاضر، جاري فتح مركز التقارير والإحصائيات');
+      if (onNavigate) onNavigate('reports');
+      return;
+    }
+    if (text.includes('غياب') || text.includes('حضور')) {
+      setFeedback({ message: 'جاري فتح سجل الغياب...', type: 'success' });
+      speak('حاضر، جاري فتح سجل الغياب');
+      if (onNavigate) onNavigate('attendance');
+      return;
+    }
+    if (text.includes('رئيسيه') || text.includes('رئيسية')) {
+      setFeedback({ message: 'العودة للرئيسية...', type: 'success' });
+      speak('حاضر، نعود للشاشة الرئيسية');
+      if (onNavigate) onNavigate('dashboard');
       return;
     }
 
-    if (text.includes('غائب') || text.includes('غياب')) {
-      setFeedback({ message: 'تم رصد الغياب بنجاح', type: 'success' });
-      speak('تم تسجيل الطالب غائباً في النظام');
-      return;
+    // ==========================================
+    // 2️⃣ أوامر الطلاب (البحث وتحديث البيانات)
+    // ==========================================
+    let foundStudent: Student | undefined;
+    
+    // نبحث عن أي طالب يطابق اسمه الأول الكلمة المنطوقة
+    for (const s of students) {
+      const firstName = normalizeText(s.name.split(' ')[0]);
+      if (text.includes(firstName)) {
+        foundStudent = s;
+        break;
+      }
     }
 
-    if (text.includes('نجمة') || text.includes('ممتاز') || text.includes('مشاركة')) {
-      setFeedback({ message: 'تم إضافة نقطة تعزيز', type: 'success' });
-      speak('تم إضافة نقطة إيجابية للطالب');
-      return;
+    if (foundStudent) {
+      // أمر تسجيل الغياب
+      if (text.includes('غايب') || text.includes('غائب')) {
+        setStudents(prev => prev.map(s => {
+          if (s.id === foundStudent!.id) {
+            return {
+              ...s,
+              attendance: [...(s.attendance || []), { date: new Date().toISOString(), status: 'absent' }]
+            };
+          }
+          return s;
+        }));
+        setFeedback({ message: `تم تسجيل غياب: ${foundStudent.name}`, type: 'success' });
+        speak(`تم تسجيل ${foundStudent.name.split(' ')[0]} غائباً في النظام`);
+        return;
+      }
+
+      // أمر التعزيز والمشاركة
+      if (text.includes('نجمه') || text.includes('نجمة') || text.includes('ممتاز') || text.includes('مشاركه')) {
+        setStudents(prev => prev.map(s => {
+          if (s.id === foundStudent!.id) {
+            return {
+              ...s,
+              behaviors: [...(s.behaviors || []), { id: Math.random().toString(), date: new Date().toISOString(), description: 'مشاركة صفية متميزة', type: 'positive', points: 1 }]
+            };
+          }
+          return s;
+        }));
+        setFeedback({ message: `إضافة نقطة لـ: ${foundStudent.name}`, type: 'success' });
+        speak(`تم إعطاء نقطة إيجابية للبطل ${foundStudent.name.split(' ')[0]}`);
+        return;
+      }
     }
 
-    setFeedback({ message: `لم أتعرف على الأمر: "${text}"`, type: 'error' });
+    // إذا لم يجد أمراً واضحاً
+    setFeedback({ message: `لم أتعرف على الأمر: "${command}"`, type: 'error' });
     speak('عذراً، لم أفهم الأمر جيداً، هل يمكنك الإعادة؟');
   };
 
@@ -90,31 +153,25 @@ const VoiceAssistant: React.FC = () => {
 
     recognition.onerror = (event: any) => {
       setIsListening(false);
-      // معالجة خطأ الرفض الأمني في الجوالات
       if (event.error === 'not-allowed') {
-         setFeedback({ message: 'الرجاء السماح للتطبيق باستخدام المايكروفون من إعدادات الهاتف', type: 'error' });
+         setFeedback({ message: 'الرجاء السماح للتطبيق باستخدام المايكروفون', type: 'error' });
       } else {
          setFeedback({ message: `حدث خطأ: ${event.error}`, type: 'error' });
       }
     };
 
     recognitionRef.current = recognition;
-  }, []);
+  }, [students]); // 💉 أضفنا طلاب للتحديث المستمر
 
-  // 💉 الجراحة الأمنية: إجبار الجوال على إظهار رسالة (هل تسمح للتطبيق باستخدام المايكروفون؟)
   const toggleListening = useCallback(async () => {
     if (isListening) {
       recognitionRef.current?.stop();
     } else {
       try {
-        // نطلب إذن المايكروفون بشكل صريح أولاً (هذا يفتح نافذة الموافقة في الجوالات)
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-           // بمجرد الموافقة، نغلق هذا المسار لأننا نريد تشغيل مسار الذكاء الاصطناعي بدلاً منه
            stream.getTracks().forEach(track => track.stop());
         }
-        
-        // الآن بعد أخذ الإذن، نشغل محرك الاستماع الذكي
         recognitionRef.current?.start();
       } catch (e) {
         console.error("Microphone permission denied", e);
