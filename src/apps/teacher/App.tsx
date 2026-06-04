@@ -35,6 +35,9 @@ import TeacherLibrary from './components/TeacherLibrary';
 import GlobalSyncManager from './components/GlobalSyncManager'; 
 // 💉 تم استدعاء شاشة مركز القيادة للمعلم الأول
 import SeniorDashboard from './components/SeniorDashboard'; 
+// 🎙️ 1. استدعاء المساعد الصوتي الخارق
+import VoiceAssistant from './components/VoiceAssistant';
+
 import { useSchoolBell } from './hooks/useSchoolBell';
 
 // 🌍 The New Global Layout Engine
@@ -81,7 +84,7 @@ const TeacherLoginScreen: React.FC<{
           onLogin();
         } else {
           setIsLoading(false);
-          setErrorMsg('بيانات الدخول غير مطابقة! الرجاء التأكد من الرقم المدني وكود المدرسة.');
+          setErrorMsg('بيانات الدخول غير مطابقة! الرجاء التأكد من رقمك الخاص  وكود المدرسة.');
         }
       }
     }, 800);
@@ -118,7 +121,7 @@ const TeacherLoginScreen: React.FC<{
           <form onSubmit={handleSubmit} className="space-y-6">
             
             <div className="space-y-2">
-              <label className="block text-xs font-bold text-white/90 px-1 text-right">الرقم المدني / الوظيفي</label>
+              <label className="block text-xs font-bold text-white/90 px-1 text-right">الدخول برقمك الخاص </label>
               <div className="relative group">
                 <div className="absolute inset-y-0 right-0 pr-4 flex items-center pointer-events-none text-indigo-300"><Fingerprint className="w-6 h-6" /></div>
                 <input type="number" value={civilId} onChange={(e) => setCivilId(e.target.value)} className="block w-full pr-14 pl-4 py-4 bg-white/10 border border-white/20 rounded-2xl focus:ring-4 focus:ring-indigo-500/30 text-white font-black text-lg outline-none text-left placeholder:text-indigo-200/50" placeholder="أدخل الرقم" required />
@@ -308,6 +311,10 @@ const AppContent: React.FC = () => {
       appSubtitle={t('appSubtitleMain') || 'النسخة المتقدمة'}
     >
       {renderContent()}
+      
+      {/* 🎙️ 2. زراعة الكبسولة العائمة (ستظهر فوق جميع الشاشات) */}
+      <VoiceAssistant />
+      
     </AppLayout>
   );
 };
