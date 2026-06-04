@@ -10,7 +10,6 @@ interface VoiceAssistantProps {
 const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
 const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
-  // 💉 جلبنا الطلاب ودالة التحديث من السياق
   const { t, dir, students, setStudents } = useApp(); 
   
   const [isListening, setIsListening] = useState(false);
@@ -29,7 +28,6 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
     }
   };
 
-  // 💉 دالة لتطبيع الحروف العربية (لكي يفهم الذكاء الاصطناعي الأسماء رغم اختلاف النطق)
   const normalizeText = (text: string) => {
     return text.replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
   };
@@ -38,34 +36,31 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
     if (!command.trim()) return;
     const text = normalizeText(command.trim());
     
-    // ==========================================
-    // 1️⃣ أوامر التنقل بين الشاشات
-    // ==========================================
+    let commandExecuted = false;
+
+    // 1️⃣ أوامر التنقل
     if (text.includes('تقارير') || text.includes('احصائيات')) {
       setFeedback({ message: 'جاري فتح مركز التقارير...', type: 'success' });
-      speak('حاضر، جاري فتح مركز التقارير والإحصائيات');
+      speak('حاضر، جاري فتح مركز التقارير');
       if (onNavigate) onNavigate('reports');
-      return;
+      commandExecuted = true;
     }
-    if (text.includes('غياب') || text.includes('حضور')) {
-      setFeedback({ message: 'جاري فتح سجل الغياب...', type: 'success' });
-      speak('حاضر، جاري فتح سجل الغياب');
-      if (onNavigate) onNavigate('attendance');
-      return;
-    }
-    if (text.includes('رئيسيه') || text.includes('رئيسية')) {
+    else if (text.includes('رئيسيه') || text.includes('رئيسي')) {
       setFeedback({ message: 'العودة للرئيسية...', type: 'success' });
       speak('حاضر، نعود للشاشة الرئيسية');
       if (onNavigate) onNavigate('dashboard');
-      return;
+      commandExecuted = true;
+    }
+    else if (text.includes('سجل') && (text.includes('حضور') || text.includes('غياب') || text.includes('الغياب'))) {
+       // إذا قال فقط "افتح سجل الغياب" بدون اسم طالب
+       setFeedback({ message: 'جاري فتح سجل الغياب...', type: 'success' });
+       speak('حاضر، تم فتح سجل الغياب');
+       if (onNavigate) onNavigate('attendance');
+       commandExecuted = true;
     }
 
-    // ==========================================
-    // 2️⃣ أوامر الطلاب (البحث وتحديث البيانات)
-    // ==========================================
+    // 2️⃣ البحث عن اسم طالب في الجملة
     let foundStudent: Student | undefined;
-    
-    // نبحث عن أي طالب يطابق اسمه الأول الكلمة المنطوقة
     for (const s of students) {
       const firstName = normalizeText(s.name.split(' ')[0]);
       if (text.includes(firstName)) {
@@ -74,8 +69,8 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
       }
     }
 
+    // 3️⃣ تنفيذ أوامر الطالب (إذا وجدنا اسماً)
     if (foundStudent) {
-      // أمر تسجيل الغياب
       if (text.includes('غايب') || text.includes('غائب')) {
         setStudents(prev => prev.map(s => {
           if (s.id === foundStudent!.id) {
@@ -87,12 +82,10 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
           return s;
         }));
         setFeedback({ message: `تم تسجيل غياب: ${foundStudent.name}`, type: 'success' });
-        speak(`تم تسجيل ${foundStudent.name.split(' ')[0]} غائباً في النظام`);
-        return;
+        speak(`تم تسجيل ${foundStudent.name.split(' ')[0]} غائباً`);
+        commandExecuted = true;
       }
-
-      // أمر التعزيز والمشاركة
-      if (text.includes('نجمه') || text.includes('نجمة') || text.includes('ممتاز') || text.includes('مشاركه')) {
+      else if (text.includes('نجمه') || text.includes('نجمة') || text.includes('ممتاز') || text.includes('مشاركه')) {
         setStudents(prev => prev.map(s => {
           if (s.id === foundStudent!.id) {
             return {
@@ -104,18 +97,20 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
         }));
         setFeedback({ message: `إضافة نقطة لـ: ${foundStudent.name}`, type: 'success' });
         speak(`تم إعطاء نقطة إيجابية للبطل ${foundStudent.name.split(' ')[0]}`);
-        return;
+        commandExecuted = true;
       }
     }
 
-    // إذا لم يجد أمراً واضحاً
-    setFeedback({ message: `لم أتعرف على الأمر: "${command}"`, type: 'error' });
-    speak('عذراً، لم أفهم الأمر جيداً، هل يمكنك الإعادة؟');
+    // 4️⃣ إذا لم يفهم الأمر
+    if (!commandExecuted) {
+      setFeedback({ message: `لم أتعرف على الأمر: "${command}"`, type: 'error' });
+      speak('عذراً، لم أفهم الأمر جيداً، هل يمكنك الإعادة؟');
+    }
   };
 
   useEffect(() => {
     if (!SpeechRecognition) {
-      setFeedback({ message: 'المتصفح أو الجوال لا يدعم الأوامر الصوتية', type: 'error' });
+      setFeedback({ message: 'البيئة الحالية لا تدعم محرك الصوت', type: 'error' });
       return;
     }
 
@@ -147,35 +142,40 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
       if (finalText) {
         processCommand(finalText);
       } else {
-        setFeedback({ message: 'تم إيقاف المايكروفون', type: null });
+        setFeedback({ message: 'تم إيقاف المايكروفون (بدون صوت)', type: null });
       }
     };
 
     recognition.onerror = (event: any) => {
       setIsListening(false);
+      console.error("Speech Recognition Error:", event.error);
       if (event.error === 'not-allowed') {
-         setFeedback({ message: 'الرجاء السماح للتطبيق باستخدام المايكروفون', type: 'error' });
+         setFeedback({ message: 'الرجاء السماح للتطبيق باستخدام المايكروفون من إعدادات المتصفح', type: 'error' });
+      } else if (event.error === 'no-speech') {
+         setFeedback({ message: 'لم أتمكن من سماع أي صوت', type: 'error' });
       } else {
-         setFeedback({ message: `حدث خطأ: ${event.error}`, type: 'error' });
+         setFeedback({ message: `توقف بسبب: ${event.error}`, type: 'error' });
       }
     };
 
     recognitionRef.current = recognition;
-  }, [students]); // 💉 أضفنا طلاب للتحديث المستمر
+  }, [students, onNavigate]);
 
-  const toggleListening = useCallback(async () => {
+  // 💉 الجراحة: إزالة التعقيد السابق وجعل المتصفح يطلب الإذن بالطريقة القياسية
+  const toggleListening = useCallback(() => {
     if (isListening) {
       recognitionRef.current?.stop();
     } else {
       try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-           stream.getTracks().forEach(track => track.stop());
-        }
+        setFeedback({ message: 'جاري تشغيل المايكروفون...', type: 'info' });
         recognitionRef.current?.start();
-      } catch (e) {
-        console.error("Microphone permission denied", e);
-        setFeedback({ message: 'عذراً، يجب إعطاء الإذن لاستخدام المايكروفون أولاً!', type: 'error' });
+      } catch (e: any) {
+        console.error("Start Error:", e);
+        if (e.name === 'InvalidStateError') {
+           setFeedback({ message: 'المايكروفون يعمل بالفعل', type: 'info' });
+        } else {
+           setFeedback({ message: 'حدث خطأ غير متوقع في تشغيل المايكروفون', type: 'error' });
+        }
       }
     }
   }, [isListening]);
