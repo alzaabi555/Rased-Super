@@ -312,8 +312,8 @@ const AppContent: React.FC = () => {
     >
       {renderContent()}
       
-      {/* 🎙️ 2. زراعة الكبسولة العائمة (ستظهر فوق جميع الشاشات) */}
-      <VoiceAssistant />
+      {/* 🎙️ 2. زراعة الكبسولة وتمرير مفاتيح التنقل لها */}
+      <VoiceAssistant onNavigate={handleNavigate} />
       
     </AppLayout>
   );
