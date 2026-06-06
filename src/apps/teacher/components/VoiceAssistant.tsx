@@ -18,6 +18,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
   
   const recognitionRef = useRef<any>(null);
   const shouldListenRef = useRef(false);
+  const feedbackTimerRef = useRef<NodeJS.Timeout>();
 
   const studentsRef = useRef(students);
   useEffect(() => { studentsRef.current = students; }, [students]);
@@ -32,6 +33,22 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
       window.speechSynthesis.speak(utterance);
     }
   };
+
+  // 👁️ الميزة الجديدة: إخفاء المربع الذكي بعد التنفيذ
+  const displayFeedback = useCallback((msg: string, type: 'success' | 'error' | 'info' | null) => {
+    setFeedback({ message: msg, type });
+    
+    if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
+    
+    // إخفاء أو إعادة تعيين الرسالة بعد 3 ثواني
+    feedbackTimerRef.current = setTimeout(() => {
+      if (shouldListenRef.current) {
+        setFeedback({ message: 'راصد يستمع الآن...', type: 'info' });
+      } else {
+        setFeedback({ message: '', type: null }); // إخفاء المربع بالكامل
+      }
+    }, 3000);
+  }, []);
 
   // 1️⃣ تنظيف النص
   const normalizeText = (text: string) => {
@@ -83,9 +100,8 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
     return null;
   };
 
-  // 👁️ الميزة الجديدة: محرك البحث والتفاعل الذكي مع مكونات الشاشة (الإصبع الافتراضي)
+  // 👁️ محرك البحث والتفاعل الذكي مع مكونات الشاشة (الإصبع الافتراضي)
   const scanAndClick = (command: string): boolean => {
-    // الكلمات المفتاحية الشائعة للأزرار
     const actionsMap: { [key: string]: RegExp } = {
       'add': /(اضافه|جديد|اضف|انشاء)/,
       'save': /(حفظ|تأكيد|تاكيد|موافق|تم)/,
@@ -98,29 +114,24 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
       'filter': /(تصفيه|فلتر)/
     };
 
-    // جلب كل العناصر القابلة للنقر في الشاشة الحالية
     const clickableElements = Array.from(document.querySelectorAll('button, a, [role="button"], input[type="submit"]'));
     let bestMatch: HTMLElement | null = null;
 
     for (const el of clickableElements) {
       const elementText = normalizeText((el.textContent || '').trim());
       const ariaLabel = normalizeText(el.getAttribute('aria-label') || '');
-      const voiceData = normalizeText(el.getAttribute('data-voice') || ''); // خاصية سنضيفها لاحقاً للأزرار الصعبة
+      const voiceData = normalizeText(el.getAttribute('data-voice') || ''); 
 
-      // 1. فحص مباشر: هل المستخدم نطق اسم الزر المكتوب أمامه؟
       if (elementText && command.includes(elementText)) {
         bestMatch = el as HTMLElement; break;
       }
       
-      // 2. فحص الأيقونات (التي لا تحتوي نص ولكن لها aria-label)
       if (ariaLabel && command.includes(ariaLabel)) {
         bestMatch = el as HTMLElement; break;
       }
 
-      // 3. فحص الكلمات المفتاحية العامة (مثل: "حفظ"، "تراجع")
       for (const [action, regex] of Object.entries(actionsMap)) {
         if (regex.test(command)) {
-          // هل هذا الزر يدل على هذا الفعل؟
           if (regex.test(elementText) || regex.test(ariaLabel) || regex.test(voiceData)) {
             bestMatch = el as HTMLElement; break;
           }
@@ -130,11 +141,9 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
     }
 
     if (bestMatch) {
-      // تمييز بصري خفيف للزر الذي تم النقر عليه
       bestMatch.style.boxShadow = '0 0 0 4px rgba(99, 102, 241, 0.5)';
       setTimeout(() => { if (bestMatch) bestMatch.style.boxShadow = ''; }, 300);
-      
-      bestMatch.click(); // النقر الفعلي!
+      bestMatch.click(); 
       return true;
     }
 
@@ -148,18 +157,14 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
     const originalText = command.trim();
     const text = normalizeText(originalText);
     
-    // 1️⃣ محاولة التفاعل مع الشاشة الحالية أولاً (الأزرار، النوافذ، الإجراءات المباشرة)
-    // نضعها أولاً لكي يستطيع المستخدم قول "حفظ" أو "إضافة طالب" وهي داخل شاشة الطلاب
     if (scanAndClick(text)) {
-      setFeedback({ message: `تم تنفيذ الإجراء`, type: 'success' });
+      displayFeedback(`تم تنفيذ الإجراء`, 'success');
       return;
     }
 
-    // 2️⃣ البحث عن التنقلات المركزية
     const isNavigationWord = text.match(/(افتح|روح|انتقل|عرض|هات|صفح|شاش|ودني|ورني|قسم)/);
     const targetRoute = getTargetRoute(text);
 
-    // 3️⃣ البحث عن الطلاب في قاعدة البيانات للتقييم المركزى
     let foundStudent: Student | undefined;
     for (const s of studentsRef.current) {
       const studentWords = s.name.split(' ').map(normalizeText);
@@ -173,7 +178,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
     if (targetRoute && (isNavigationWord || !foundStudent)) {
       if (navigateRef.current) {
         navigateRef.current(targetRoute);
-        setFeedback({ message: `جاري الانتقال...`, type: 'success' });
+        displayFeedback(`جاري الانتقال...`, 'success');
         return;
       }
     }
@@ -187,30 +192,30 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
 
       if (isAbsent) {
         setStudents(prev => prev.map(s => s.id === foundStudent!.id ? { ...s, attendance: [...(s.attendance || []), { date: new Date().toISOString(), status: 'absent' }] } : s));
-        setFeedback({ message: `غياب: ${foundStudent.name}`, type: 'success' });
+        displayFeedback(`غياب: ${foundStudent.name}`, 'success');
         speak(`تم الغياب`);
         return;
       }
       else if (isPresent) {
         setStudents(prev => prev.map(s => s.id === foundStudent!.id ? { ...s, attendance: [...(s.attendance || []), { date: new Date().toISOString(), status: 'present' }] } : s));
-        setFeedback({ message: `حضور: ${foundStudent.name}`, type: 'success' });
+        displayFeedback(`حضور: ${foundStudent.name}`, 'success');
         return;
       }
       else if (isNegative) {
         setStudents(prev => prev.map(s => s.id === foundStudent!.id ? { ...s, behaviors: [...(s.behaviors || []), { id: Math.random().toString(), date: new Date().toISOString(), description: `تقويم سلوك (${amount})`, type: 'negative', points: -amount }] } : s));
-        setFeedback({ message: `خصم ${amount} من: ${foundStudent.name}`, type: 'success' });
+        displayFeedback(`خصم ${amount} من: ${foundStudent.name}`, 'success');
         speak(`خصم ${amount}`);
         return;
       }
       else if (isPositive) {
         setStudents(prev => prev.map(s => s.id === foundStudent!.id ? { ...s, behaviors: [...(s.behaviors || []), { id: Math.random().toString(), date: new Date().toISOString(), description: `مشاركة وتفاعل (${amount})`, type: 'positive', points: amount }] } : s));
-        setFeedback({ message: `إضافة ${amount} لـ: ${foundStudent.name}`, type: 'success' });
+        displayFeedback(`إضافة ${amount} لـ: ${foundStudent.name}`, 'success');
         speak(`إضافة ${amount}`);
         return;
       }
     }
 
-    setFeedback({ message: `أمر غير واضح: "${originalText}"`, type: 'error' });
+    displayFeedback(`أمر غير واضح: "${originalText}"`, 'error');
   };
 
   useEffect(() => {
@@ -222,6 +227,8 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
 
     recognition.onstart = () => {
       setIsListening(true);
+      // مسح أي مؤقت سابق وتثبيت رسالة الاستماع
+      if (feedbackTimerRef.current) clearTimeout(feedbackTimerRef.current);
       setFeedback({ message: 'راصد يستمع الآن...', type: 'info' });
     };
 
@@ -250,7 +257,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
         try { recognition.start(); } catch (e) {}
       } else {
         setIsListening(false);
-        setFeedback({ message: 'تم الإيقاف', type: null });
+        displayFeedback('تم الإيقاف', null);
       }
     };
 
@@ -258,7 +265,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
       if (event.error === 'not-allowed') {
          shouldListenRef.current = false;
          setIsListening(false);
-         setFeedback({ message: 'الرجاء السماح للتطبيق باستخدام المايكروفون', type: 'error' });
+         displayFeedback('الرجاء السماح للتطبيق باستخدام المايكروفون', 'error');
       }
     };
 
@@ -268,7 +275,7 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
        shouldListenRef.current = false;
        recognition.stop();
     }
-  }, []); 
+  }, [displayFeedback]); 
 
   const toggleListening = useCallback(() => {
     shouldListenRef.current = !shouldListenRef.current;
@@ -282,7 +289,8 @@ const VoiceAssistant: React.FC<VoiceAssistantProps> = ({ onNavigate }) => {
   if (!SpeechRecognition) return null;
 
   return (
-    <div className={`fixed bottom-6 ${dir === 'rtl' ? 'left-6' : 'right-6'} z-[99999] flex flex-col items-${dir === 'rtl' ? 'start' : 'end'} pointer-events-none`} dir={dir}>
+    // 💉 التعديل الهندسي الأهم هنا: bottom-24 للموبايل ليرتفع فوق القائمة السفلية، و md:bottom-8 للشاشات الكبيرة
+    <div className={`fixed bottom-24 md:bottom-8 ${dir === 'rtl' ? 'left-6' : 'right-6'} z-[99999] flex flex-col items-${dir === 'rtl' ? 'start' : 'end'} pointer-events-none`} dir={dir}>
       
       {(isListening || transcript || feedback.message) && (
         <div className="mb-4 bg-white/95 backdrop-blur-xl border border-gray-200 shadow-2xl rounded-2xl p-4 max-w-sm pointer-events-auto animate-in slide-in-from-bottom-2 fade-in shadow-indigo-500/10">
